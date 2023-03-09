@@ -1,0 +1,6 @@
+data/app.drey.FlatSync.desktop.in.in
+data/app.drey.FlatSync.gschema.xml.in
+data/app.drey.FlatSync.metainfo.xml.in.in
+data/resources/ui/shortcuts.ui
+data/resources/ui/window.ui
+src/application.rs
