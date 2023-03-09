@@ -1,77 +1,25 @@
-# GTK + Rust + Meson + Flatpak = <3
+# Flatpak synching between machines
 
-A boilerplate template to get started with GTK, Rust, Meson, Flatpak made for GNOME. It can be adapted for other desktop environments like elementary.
+This is a new application participating in GNOME's GSoC '23: https://gsoc.gnome.org/2023/#flatpak-sync-between-machines
 
-<div align="center">
-![Main window](data/resources/screenshots/screenshot1.png "Main window")
-</div>
+Currently, it’s rather bothersome to sync the Flatpak packages installed on multiple systems: One either has to manually keep them in sync or use the CLI to get a list of installed Flatpaks.
 
-## What does it contains?
+As such, it would be useful to have an application that can do this for users. The go-to approach would be a D-Bus daemon that automatically (either on changes or periodically) creates a list of installed Flatpaks and pushes it to a service like GitHub Gists. If a new version is detected (which comes from a different system), the daemon would fetch it and adjust the local installation accordingly.
 
-- A simple window with a headerbar
-- Bunch of useful files that you SHOULD ship with your application on Linux:
-  - Metainfo: describe your application for the different application stores out there;
-  - Desktop: the application launcher;
-  - Icons: This repo contains three icons, a normal, a nightly & monochromatic icon (symbolic) per the GNOME HIG, exported using [App Icon Preview](https://flathub.org/apps/details/org.gnome.design.AppIconPreview).
-- Flatpak Manifest for nightly builds
-- Dual installation support
-- Uses Meson for building the application
-- Bundles the UI files & the CSS using gresources
-- A pre-commit hook to run rustfmt on your code
-- Tests to validate your Metainfo, Schemas & Desktop files
-- Gsettings to store the window state, more settings could be added
-- Gitlab CI to produce flatpak nightlies
-- i18n support
+Additionally, there should be a GUI application that can interface with the daemon for setup and configuration. A CLI application for usage independent of the DE and manual syncing would be a plus.
 
-## How to init a project ?
+# Requirements
 
-The template ships a simple python script to init a project easily. It asks you a few questions and replaces & renames all the necessary files.
+Since the project should be useable on Silverblue, it’d be good if the binary can run on it by default. Since Silverblue doesn’t have GJS nor Python installed by default, Rust seems like a good choice now that we have zbus.
 
-The script requires having `git` installed on your system.
+=> Familiarity with Rust & DBus
 
-You can run it with,
+# Communication
 
-```shell
-python3 create-project.py
-```
+* Matrix: @cogitri:gnome.org
 
-```shell
-➜ python3 create-project.py
-Welcome to GTK Rust Template
-Name: Contrast
-Project Name: contrast
-Application ID (e.g. org.domain.MyAwesomeApp, see: https://developer.gnome.org/ChooseApplicationID/): org.gnome.design.Contrast
-Author: Bilal Elmoussaoui
-Email: bil.elmoussaoui@gmail.com
-```
+Mentor(s): [Rasmus Thomsen](https://gitlab.gnome.org/Cogitri)
 
-A new directory named `contrast` containing the generated project
+Project length: 175 hours
 
-## Building the project
-
-Make sure you have `flatpak` and `flatpak-builder` installed. Then run the commands below. Replace `<application_id>` with the value you entered during project creation. Please note that these commands are just for demonstration purposes. Normally this would be handled by your IDE, such as GNOME Builder or VS Code with the Flatpak extension.
-
-```
-flatpak install org.gnome.Sdk//43 org.freedesktop.Sdk.Extension.rust-stable//22.08 org.gnome.Platform//43
-flatpak-builder --user flatpak_app build-aux/<application_id>.Devel.json
-```
-
-## Running the project
-
-Once the project is build, run the command below. Replace Replace `<application_id>` and `<project_name>` with the values you entered during project creation. Please note that these commands are just for demonstration purposes. Normally this would be handled by your IDE, such as GNOME Builder or VS Code with the Flatpak extension.
-
-```
-flatpak-builder --run flatpak_app build-aux/<application_id>.Devel.json <project_name>
-```
-
-## Community
-
-Join the GNOME and gtk-rs community!
-- [Matrix chat](https://matrix.to/#/#rust:gnome.org): chat with other developers using gtk-rs
-- [Discourse forum](https://discourse.gnome.org/tag/rust): topics tagged with `rust` on the GNOME forum.
-- [GNOME circle](https://circle.gnome.org/): take inspiration from applications and libraries already extending the GNOME ecosystem.
-
-## Credits
-
-- [Podcasts](https://gitlab.gnome.org/World/podcasts)
-- [Shortwave](https://gitlab.gnome.org/World/Shortwave)
+More information: https://gitlab.gnome.org/Teams/Engagement/internship-project-ideas/-/issues/34
