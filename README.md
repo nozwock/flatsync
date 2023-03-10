@@ -1,6 +1,6 @@
 # Flatpak synching between machines
 
-This is a new application participating in GNOME's GSoC '23: https://gsoc.gnome.org/2023/#flatpak-sync-between-machines
+This is a new application participating in GNOME's GSoC '23: https://gsoc.gnome.org/2023/#flatpak-sync-between-machines . See the [architecture docs](./docs/architecture.md) for more information as to how the project should be structured.
 
 Currently, it’s rather bothersome to sync the Flatpak packages installed on multiple systems: One either has to manually keep them in sync or use the CLI to get a list of installed Flatpaks.
 
