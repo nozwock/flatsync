@@ -532,6 +532,7 @@ version = "0.1.0"
 dependencies = [
  "async-std",
  "libflatpak",
+ "oo7",
  "zbus",
 ]
 
