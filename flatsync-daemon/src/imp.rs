@@ -1,5 +1,6 @@
 use crate::api;
 use libflatpak::{gio, traits::*};
+use serde_json::json;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -37,6 +38,27 @@ impl Impl {
             .collect())
     }
 
+    pub fn get_installed_system_flatpaks(&self) -> Result<Vec<String>, Error> {
+        let refs = libflatpak::Installation::new_system(gio::Cancellable::NONE).and_then(|i| {
+            i.list_installed_refs_by_kind(libflatpak::RefKind::App, gio::Cancellable::NONE)
+        })?;
+        Ok(refs
+            .into_iter()
+            .filter_map(|r| r.name())
+            .map(|n| n.to_string())
+            .collect())
+    }
+
+    pub fn serialise_json(&self) -> Result<serde_json::Value, Error> {
+        let installed_flatpaks_user = self.get_installed_user_flatpaks().unwrap();
+        let installed_flatpaks_system = self.get_installed_system_flatpaks().unwrap();
+        let json_data = json!({
+            "user": &installed_flatpaks_user,
+            "system": &installed_flatpaks_system
+        });
+        Ok(json_data)
+    }
+
     pub async fn get_gist_secret_item(&self) -> Result<oo7::Item, Error> {
         self.keyring.unlock().await?;
         let mut item = self
@@ -59,19 +81,19 @@ impl Impl {
     }
 
     pub async fn post_gist(&self) {
-        let installed_flatpaks = self.get_installed_user_flatpaks().unwrap();
+        let json_data = self.serialise_json().unwrap();
         let secret_item = self.get_gist_secret_item().await.unwrap();
         let secret = self.get_gist_secret().await.unwrap();
         let mut attributes = secret_item.attributes().await.unwrap();
         if attributes.contains_key("gist_id") {
             let gist_id = attributes.get("gist_id").unwrap();
-            let request = api::UpdateGist::new(installed_flatpaks.join(";"));
+            let request = api::UpdateGist::new(json_data.to_string());
             request.post(&secret, &gist_id).await.unwrap();
         } else {
             let request = api::CreateGist::new(
                 "List of installed flatpaks".to_string(),
                 false,
-                installed_flatpaks.join(";"),
+                json_data.to_string(),
             );
             let resp = request.post(&secret).await.unwrap();
             attributes.insert("gist_id".to_string(), resp.id);
