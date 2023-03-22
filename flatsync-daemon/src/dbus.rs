@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 use zbus::dbus_interface;
-
+use crate::imp::Error;
 use gtk::glib;
 use std::path::Path;
 use tokio::fs;
-
 use flatsync::config;
 
 pub struct Daemon {
@@ -35,11 +34,9 @@ impl Daemon {
 }
 
 impl Daemon {
-    pub async fn new() -> Self {
-        let keyring = oo7::Keyring::new().await;
-        Self {
-            keyring: keyring.unwrap(),
-        }
+    pub async fn new() -> Result<Self, Error> {
+        let keyring = oo7::Keyring::new().await?;
+        Ok(Self { keyring })
     }
 
     async fn set_gist_secret_imp(&mut self, secret: &str) -> Result<(), oo7::Error> {

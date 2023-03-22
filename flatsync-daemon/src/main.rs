@@ -6,7 +6,7 @@ mod imp;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut daemon = dbus::Daemon::new().await;
+    let mut daemon = dbus::Daemon::new().await?;
 
     let _con = ConnectionBuilder::session()?
         .name("app.drey.FlatSync.Daemon")?
@@ -16,7 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Started daemon. Press Ctrl+C to exit.");
 
-    let imp = imp::Impl::new().await;
+    let imp = imp::Impl::new().await?;
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
     loop {
         interval.tick().await;
@@ -24,6 +24,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("No secret found");
             continue;
         }
-        imp.post_gist().await;
+        imp.post_gist().await?;
     }
 }
