@@ -11,11 +11,11 @@ libflatpak = { version = "0.3.0", features = ["v1_13_3"] }
 zbus = { version = "3.11.0", features = ["tokio"], default-features = false }
 oo7 = { version = "0.1.0-beta.3", default-features = false, features = [
   "tokio",
-  "native_crypto",
+  "openssl_crypto",
 ] }
 serde_json = "1"
 serde = "1"
-surf = "2"
+reqwest = { version = "0.11", features = ["json", "native-tls-crate"], default-features = false }
 anyhow = "1"
 thiserror = "1"
 glib = "0.17"

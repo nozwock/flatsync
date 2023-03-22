@@ -88,7 +88,7 @@ impl Impl {
         if attributes.contains_key("gist_id") {
             let gist_id = attributes.get("gist_id").unwrap();
             let request = api::UpdateGist::new(json_data.to_string());
-            request.post(&secret, &gist_id).await.unwrap();
+            request.post(&secret, gist_id).await.unwrap();
         } else {
             let request = api::CreateGist::new(
                 "List of installed flatpaks".to_string(),

@@ -14,6 +14,8 @@ enum DBusError {
     CouldntQueryInstalledFlatpaks,
     #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.InvalidSecret")]
     InvalidSecret,
+    #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.AutoStart")]
+    AutoStart,
 }
 
 #[dbus_interface(name = "app.drey.FlatSync.Daemon1")]
@@ -26,8 +28,11 @@ impl Daemon {
             .await
             .map_err(|_| DBusError::InvalidSecret)
     }
-    async fn install_autostart_file(&mut self) {
-        self.install_autostart_file_imp().await;
+
+    async fn install_autostart_file(&mut self) -> Result<(), DBusError> {
+        self.install_autostart_file_imp()
+            .await
+            .map_err(|_| DBusError::AutoStart)
     }
 }
 
@@ -63,11 +68,11 @@ impl Daemon {
         let mut autostart_user_folder = glib::user_config_dir();
         autostart_user_folder.push("autostart");
         if !autostart_user_folder.exists() {
-            fs::create_dir_all(&autostart_user_folder).await;
+            fs::create_dir_all(&autostart_user_folder).await?;
         }
-        autostart_user_folder.push(&desktop_file_name);
+        autostart_user_folder.push(desktop_file_name);
         if !autostart_user_folder.exists() {
-            fs::copy(autostart_desktop_file, autostart_user_folder).await;
+            fs::copy(autostart_desktop_file, autostart_user_folder).await?;
         }
         Ok(())
     }

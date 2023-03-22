@@ -1,5 +1,6 @@
 // '{"description":"Example of a gist","public":false,"files":{"README.md":{"content":"Hello World"}}}'
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::collections::BTreeMap;
 
 #[derive(Serialize, Deserialize)]
@@ -33,14 +34,16 @@ impl CreateGist {
         }
     }
 
-    pub async fn post(&self, github_token: &str) -> Result<CreateGistResponse, surf::Error> {
-        let mut res = surf::post("https://api.github.com/gists")
-            .body_json(self)?
+    pub async fn post(&self, github_token: &str) -> Result<CreateGistResponse, reqwest::Error> {
+        let res = reqwest::Client::new()
+            .post("https://api.github.com/gists")
+            .body(json!(self).to_string())
             .header("Accept", "application/vnd.github+json")
             .header("Authorization", format!("Bearer {}", github_token))
             .header("X-GitHub-Api-Version", "2022-11-28")
+            .send()
             .await?;
-        res.body_json().await
+        res.json().await
     }
 }
 
@@ -51,12 +54,14 @@ impl UpdateGist {
         }
     }
 
-    pub async fn post(&self, github_token: &str, gist_id: &str) -> Result<(), surf::Error> {
-        surf::post(&format!("https://api.github.com/gists/{}", gist_id))
-            .body_json(self)?
+    pub async fn post(&self, github_token: &str, gist_id: &str) -> Result<(), reqwest::Error> {
+        reqwest::Client::new()
+            .post(&format!("https://api.github.com/gists/{}", gist_id))
+            .body(json!(self).to_string())
             .header("Accept", "application/vnd.github+json")
             .header("Authorization", format!("Bearer {}", github_token))
             .header("X-GitHub-Api-Version", "2022-11-28")
+            .send()
             .await?;
 
         Ok(())

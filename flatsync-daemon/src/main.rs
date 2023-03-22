@@ -6,7 +6,7 @@ mod imp;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut daemon = dbus::Daemon::new().await;
+    let daemon = dbus::Daemon::new().await;
 
     let _con = ConnectionBuilder::session()?
         .name("app.drey.FlatSync.Daemon")?
