@@ -12,6 +12,10 @@ pub enum Error {
     KeychainEntryNotFound(),
     #[error("Error querying installed flatpaks")]
     CouldntQueryInstalledFlatpaks(#[from] libflatpak::glib::Error),
+    #[error("Utf8 error during conversion")]
+    Utf8Error(#[from] std::str::Utf8Error),
+    #[error("HTTP error")]
+    HttpError(#[from] reqwest::Error),
 }
 
 pub struct Impl {
@@ -19,11 +23,9 @@ pub struct Impl {
 }
 
 impl Impl {
-    pub async fn new() -> Self {
-        let keyring = oo7::Keyring::new().await;
-        Self {
-            keyring: keyring.unwrap(),
-        }
+    pub async fn new() -> Result<Self, Error> {
+        let keyring = oo7::Keyring::new().await?;
+        Ok(Self { keyring })
     }
 
     // Can be `async` as well.
@@ -50,8 +52,8 @@ impl Impl {
     }
 
     pub fn serialise_json(&self) -> Result<serde_json::Value, Error> {
-        let installed_flatpaks_user = self.get_installed_user_flatpaks().unwrap();
-        let installed_flatpaks_system = self.get_installed_system_flatpaks().unwrap();
+        let installed_flatpaks_user = self.get_installed_user_flatpaks()?;
+        let installed_flatpaks_system = self.get_installed_system_flatpaks()?;
         let json_data = json!({
             "user": &installed_flatpaks_user,
             "system": &installed_flatpaks_system
@@ -65,47 +67,41 @@ impl Impl {
             .keyring
             .search_items(HashMap::from([("purpose", "gist_secret")]))
             .await?;
-        if item.is_empty() {
-            // panic!("No secret found");
-            return Err(Error::KeychainEntryNotFound());
-        }
-        Ok(item.pop().unwrap())
+        item.pop().ok_or(Error::KeychainEntryNotFound())
     }
 
     pub async fn get_gist_secret(&self) -> Result<String, Error> {
-        Ok(
-            std::str::from_utf8(&self.get_gist_secret_item().await?.secret().await.unwrap())
-                .unwrap()
-                .to_string(),
-        )
+        Ok(std::str::from_utf8(&self.get_gist_secret_item().await?.secret().await?)?.to_string())
     }
 
-    pub async fn post_gist(&self) {
-        let json_data = self.serialise_json().unwrap();
-        let secret_item = self.get_gist_secret_item().await.unwrap();
-        let secret = self.get_gist_secret().await.unwrap();
-        let mut attributes = secret_item.attributes().await.unwrap();
-        if attributes.contains_key("gist_id") {
-            let gist_id = attributes.get("gist_id").unwrap();
-            let request = api::UpdateGist::new(json_data.to_string());
-            request.post(&secret, gist_id).await.unwrap();
-        } else {
-            let request = api::CreateGist::new(
-                "List of installed flatpaks".to_string(),
-                false,
-                json_data.to_string(),
-            );
-            let resp = request.post(&secret).await.unwrap();
-            attributes.insert("gist_id".to_string(), resp.id);
-            secret_item
-                .set_attributes(
-                    attributes
-                        .iter()
-                        .map(|(k, v)| (k.as_str(), v.as_str()))
-                        .collect(),
-                )
-                .await
-                .unwrap();
+    pub async fn post_gist(&self) -> Result<(), Error> {
+        let json_data = self.serialise_json()?;
+        let secret_item = self.get_gist_secret_item().await?;
+        let secret = self.get_gist_secret().await?;
+        let mut attributes = secret_item.attributes().await?;
+        match attributes.get("gist_id") {
+            Some(gist_id) => {
+                let request = api::UpdateGist::new(json_data.to_string());
+                request.post(&secret, &gist_id).await?;
+            }
+            None => {
+                let request = api::CreateGist::new(
+                    "List of installed flatpaks".to_string(),
+                    false,
+                    json_data.to_string(),
+                );
+                let resp = request.post(&secret).await?;
+                attributes.insert("gist_id".to_string(), resp.id);
+                secret_item
+                    .set_attributes(
+                        attributes
+                            .iter()
+                            .map(|(k, v)| (k.as_str(), v.as_str()))
+                            .collect(),
+                    )
+                    .await?;
+            }
         }
+        Ok(())
     }
 }
