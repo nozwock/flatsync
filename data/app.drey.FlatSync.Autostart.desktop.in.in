@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=FlatSync Daemon
+Comment=Start Flatsync Daemon
+Type=Application
+Exec=flatsync-daemon
+Icon=@icon@
+Terminal=false
+Categories=GNOME;GTK;
+# Translators: Search terms to find this application. Do NOT translate or localize the semicolons! The list MUST also end with a semicolon!
+Keywords=Gnome;GTK;
+# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+StartupNotify=false
+NoDisplay=true

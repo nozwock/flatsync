@@ -15,6 +15,23 @@ desktop_file = i18n.merge_file(
   install: true,
   install_dir: datadir / 'applications'
 )
+
+configured_autostart_file = configure_file(
+  input: 'app.drey.FlatSync.Autostart.desktop.in.in',
+  output: '@BASENAME@',
+  configuration: desktop_conf,
+)
+
+autostart_desktop_file = i18n.merge_file(
+  input: configured_autostart_file,
+  output: '@BASENAME@',
+  type: 'desktop',
+  po_dir: '../po',
+  install: true,
+  install_dir: get_option('datadir') / 'applications',
+)
+
+
 # Validate Desktop file
 if desktop_file_validate.found()
   test(
