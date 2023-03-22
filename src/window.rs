@@ -1,9 +1,8 @@
+use crate::application::ExampleApplication;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib};
-
-use crate::application::ExampleApplication;
-use crate::config::{APP_ID, PROFILE};
+use libflatsync_common::config::{APP_ID, PROFILE};
 
 mod imp {
     use super::*;

@@ -62,6 +62,7 @@ endif
 
 subdir('data')
 subdir('po')
+subdir('libflatsync-common')
 subdir('src')
 
 gnome.post_install(

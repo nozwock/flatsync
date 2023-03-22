@@ -1,13 +1,10 @@
 mod application;
-#[rustfmt::skip]
-mod config;
 mod window;
 
+use self::application::ExampleApplication;
 use gettextrs::{gettext, LocaleCategory};
 use gtk::{gio, glib};
-
-use self::application::ExampleApplication;
-use self::config::{GETTEXT_PACKAGE, LOCALEDIR, RESOURCES_FILE};
+use libflatsync_common::config::{GETTEXT_PACKAGE, LOCALEDIR, RESOURCES_FILE};
 
 fn main() -> glib::ExitCode {
     // Initialize logger

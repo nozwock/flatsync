@@ -1,11 +1,12 @@
 use gettextrs::gettext;
+use gtk::{
+    prelude::*,
+    subclass::prelude::*,
+    {gdk, gio, glib},
+};
+use libflatsync_common::config::{APP_ID, PKGDATADIR, PROFILE, VERSION};
 use log::{debug, info};
 
-use gtk::prelude::*;
-use gtk::subclass::prelude::*;
-use gtk::{gdk, gio, glib};
-
-use crate::config::{APP_ID, PKGDATADIR, PROFILE, VERSION};
 use crate::window::ExampleApplicationWindow;
 
 mod imp {

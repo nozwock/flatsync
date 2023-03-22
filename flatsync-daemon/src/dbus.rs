@@ -1,11 +1,8 @@
+use libflatsync_common::config;
 use std::collections::HashMap;
-use zbus::dbus_interface;
-
-use gtk::glib;
 use std::path::Path;
 use tokio::fs;
-
-use flatsync::config;
+use zbus::dbus_interface;
 
 pub struct Daemon {
     keyring: oo7::Keyring,

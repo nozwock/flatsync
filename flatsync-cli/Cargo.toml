@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["macros"] }
 zbus = { version = "3.11.0", default-features = false, features = ["tokio"] }
