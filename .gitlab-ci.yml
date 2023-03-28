@@ -3,7 +3,7 @@ stages:
   - test
 
 flatpak:
-  image: 'quay.io/gnome_infrastructure/gnome-runtime-images:gnome-43'
+  image: "quay.io/gnome_infrastructure/gnome-runtime-images:gnome-43"
   stage: test
   tags:
     - flatpak
@@ -20,19 +20,26 @@ flatpak:
       flatpak-builder --keep-build-dirs --user --disable-rofiles-fuse flatpak_app --repo=repo ${BRANCH:+--default-branch=$BRANCH} ${MANIFEST_PATH}
     - flatpak build-bundle repo ${BUNDLE} --runtime-repo=${RUNTIME_REPO} ${APP_ID} ${BRANCH}
   artifacts:
-    name: 'Flatpak artifacts'
-    expose_as: 'Get Flatpak bundle here'
-    when: 'always'
+    name: "Flatpak artifacts"
+    expose_as: "Get Flatpak bundle here"
+    when: "always"
     paths:
       - "${BUNDLE}"
-      - '.flatpak-builder/build/${FLATPAK_MODULE}/_flatpak_build/meson-logs/meson-log.txt'
-      - '.flatpak-builder/build/${FLATPAK_MODULE}/_flatpak_build/meson-logs/testlog.txt'
+      - ".flatpak-builder/build/${FLATPAK_MODULE}/_flatpak_build/meson-logs/meson-log.txt"
+      - ".flatpak-builder/build/${FLATPAK_MODULE}/_flatpak_build/meson-logs/testlog.txt"
     expire_in: 14 days
 
-# Configure and run rustfmt
-# Exits and builds fails if on bad format
+clippy:
+  image: "rust:alpine"
+  stage: check
+  script:
+    - apk add flatpak-dev gtk4.0-dev musl-dev openssl-dev
+    - rustup component add clippy
+    - cargo clippy --all
+
 rustfmt:
   image: "rust:slim"
+  stage: check
   script:
     - rustup component add rustfmt
     # Create blank versions of our configured files
