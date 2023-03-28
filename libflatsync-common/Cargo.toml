@@ -10,3 +10,9 @@ oo7 = { version = "0.1.0-beta.3", default-features = false, features = [
   "tokio",
   "openssl_crypto",
 ] }
+libflatpak = "0.3"
+thiserror = "1.0"
+serde = "1.0"
+serde_json = "1.0"
+diff_derive = "0.2"
+diff-struct = "0.5"
