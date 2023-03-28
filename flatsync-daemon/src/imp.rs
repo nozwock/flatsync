@@ -1,94 +1,90 @@
 use crate::api;
-use libflatpak::{gio, traits::*};
+use libflatsync_common::{FlatpakInstallationDiff, FlatpakInstallationMap};
 use serde_json::json;
 use std::collections::HashMap;
-use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("Error doing stuff with keychain")]
-    KeychainError(#[from] oo7::Error),
-    #[error("The specified keychain entry could not be found")]
-    KeychainEntryNotFound(),
-    #[error("Error querying installed flatpaks")]
-    CouldntQueryInstalledFlatpaks(#[from] libflatpak::glib::Error),
-    #[error("Utf8 error during conversion")]
-    Utf8Error(#[from] std::str::Utf8Error),
-    #[error("HTTP error")]
-    HttpError(#[from] reqwest::Error),
-}
 
 pub struct Impl {
     keyring: oo7::Keyring,
+    diff: Vec<FlatpakInstallationDiff>,
 }
 
 impl Impl {
-    pub async fn new() -> Result<Self, Error> {
+    pub async fn new() -> Result<Self, crate::Error> {
         let keyring = oo7::Keyring::new().await?;
-        Ok(Self { keyring })
+        Ok(Self {
+            keyring,
+            diff: vec![],
+        })
     }
 
-    // Can be `async` as well.
-    pub fn get_installed_user_flatpaks(&self) -> Result<Vec<String>, Error> {
-        let refs = libflatpak::Installation::new_user(gio::Cancellable::NONE).and_then(|i| {
-            i.list_installed_refs_by_kind(libflatpak::RefKind::App, gio::Cancellable::NONE)
-        })?;
-        Ok(refs
-            .into_iter()
-            .filter_map(|r| r.name())
-            .map(|n| n.to_string())
-            .collect())
-    }
-
-    pub fn get_installed_system_flatpaks(&self) -> Result<Vec<String>, Error> {
-        let refs = libflatpak::Installation::new_system(gio::Cancellable::NONE).and_then(|i| {
-            i.list_installed_refs_by_kind(libflatpak::RefKind::App, gio::Cancellable::NONE)
-        })?;
-        Ok(refs
-            .into_iter()
-            .filter_map(|r| r.name())
-            .map(|n| n.to_string())
-            .collect())
-    }
-
-    pub fn serialise_json(&self) -> Result<serde_json::Value, Error> {
-        let installed_flatpaks_user = self.get_installed_user_flatpaks()?;
-        let installed_flatpaks_system = self.get_installed_system_flatpaks()?;
-        let json_data = json!({
-            "user": &installed_flatpaks_user,
-            "system": &installed_flatpaks_system
-        });
-        Ok(json_data)
-    }
-
-    pub async fn get_gist_secret_item(&self) -> Result<oo7::Item, Error> {
+    pub async fn gist_secret_item(&self) -> Result<oo7::Item, crate::Error> {
         self.keyring.unlock().await?;
         let mut item = self
             .keyring
             .search_items(HashMap::from([("purpose", "gist_secret")]))
             .await?;
-        item.pop().ok_or(Error::KeychainEntryNotFound())
+        item.pop().ok_or(crate::Error::KeychainEntryNotFound)
     }
 
-    pub async fn get_gist_secret(&self) -> Result<String, Error> {
-        Ok(std::str::from_utf8(&self.get_gist_secret_item().await?.secret().await?)?.to_string())
+    pub async fn gist_secret(&self) -> Result<String, crate::Error> {
+        Ok(std::str::from_utf8(&self.gist_secret_item().await?.secret().await?)?.to_string())
     }
 
-    pub async fn post_gist(&self) -> Result<(), Error> {
-        let json_data = self.serialise_json()?;
-        let secret_item = self.get_gist_secret_item().await?;
-        let secret = self.get_gist_secret().await?;
+    pub async fn create_gist(&self, public: bool) -> Result<String, crate::Error> {
+        let installations = match FlatpakInstallationMap::available_installations() {
+            Ok(map) => map,
+            Err(e) => return Err(crate::Error::FlatpakInstallationQueryFailure(e)),
+        };
+
+        let secret_item = self.gist_secret_item().await?;
+        let secret = self.gist_secret().await?;
+        let mut attrs = secret_item.attributes().await?;
+
+        match attrs.get("gist_id") {
+            Some(id) => Err(crate::Error::GistAlreadyInitialized(id.clone())),
+            None => {
+                let resp = api::CreateGist::new(
+                    "List of installed Flatpaks".into(),
+                    public,
+                    json!(installations).to_string(),
+                )
+                .post(&secret)
+                .await?;
+
+                attrs.insert("gist_id".to_string(), resp.id.clone());
+
+                secret_item
+                    .set_attributes(
+                        attrs
+                            .iter()
+                            .map(|(k, v)| (k.as_ref(), v.as_ref()))
+                            .collect(),
+                    )
+                    .await?;
+
+                Ok(resp.id)
+            }
+        }
+    }
+
+    pub async fn post_gist(&self) -> Result<(), crate::Error> {
+        let installations = match FlatpakInstallationMap::available_installations() {
+            Ok(map) => map,
+            Err(e) => return Err(crate::Error::FlatpakInstallationQueryFailure(e)),
+        };
+        let secret_item = self.gist_secret_item().await?;
+        let secret = self.gist_secret().await?;
         let mut attributes = secret_item.attributes().await?;
         match attributes.get("gist_id") {
             Some(gist_id) => {
-                let request = api::UpdateGist::new(json_data.to_string());
-                request.post(&secret, &gist_id).await?;
+                let request = api::UpdateGist::new(json!(installations).to_string());
+                request.post(&secret, gist_id).await?;
             }
             None => {
                 let request = api::CreateGist::new(
-                    "List of installed flatpaks".to_string(),
+                    "Installed Flatpaks and its remote repositories".to_string(),
                     false,
-                    json_data.to_string(),
+                    json!(installations).to_string(),
                 );
                 let resp = request.post(&secret).await?;
                 attributes.insert("gist_id".to_string(), resp.id);

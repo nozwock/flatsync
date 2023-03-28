@@ -1,11 +1,19 @@
+use std::{thread, time::Duration};
+
 use zbus::ConnectionBuilder;
 
 mod api;
 mod dbus;
-mod imp;
+mod error;
+// mod imp;
+pub(crate) use error::{DBusError, Error};
+
+use log::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    pretty_env_logger::init();
+
     let daemon = dbus::Daemon::new().await?;
 
     let _con = ConnectionBuilder::session()?
@@ -14,16 +22,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()
         .await?;
 
-    println!("Started daemon. Press Ctrl+C to exit.");
+    info!("Started daemon. Press Ctrl+C to exit");
 
-    let imp = imp::Impl::new().await?;
-    let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
     loop {
-        interval.tick().await;
-        if imp.get_gist_secret().await.is_err() {
-            println!("No secret found");
-            continue;
-        }
-        imp.post_gist().await?;
+        thread::sleep(Duration::from_secs(60));
     }
 }

@@ -1,44 +1,67 @@
-use crate::imp::Error;
-use libflatsync_common::config;
+use diff::Diff;
+use libflatsync_common::{config, FlatpakInstallationMap};
+use log::debug;
+use serde_json::json;
+use tap::Tap;
+
 use std::collections::HashMap;
 use std::path::Path;
 use tokio::fs;
 use zbus::dbus_interface;
 
+use crate::api;
+
 pub struct Daemon {
     keyring: oo7::Keyring,
 }
 
-#[derive(zbus::DBusError, Debug)]
-enum DBusError {
-    #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.CouldntQueryInstalledFlatpaks")]
-    CouldntQueryInstalledFlatpaks,
-    #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.InvalidSecret")]
-    InvalidSecret,
-    #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.AutoStart")]
-    AutoStart,
-}
-
 #[dbus_interface(name = "app.drey.FlatSync.Daemon1")]
 impl Daemon {
-    async fn set_gist_secret(&mut self, secret: &str) -> Result<(), DBusError> {
+    async fn set_gist_secret(&mut self, secret: &str) -> Result<(), crate::DBusError> {
         if secret.is_empty() {
-            return Err(DBusError::InvalidSecret);
+            return Err(crate::DBusError::InvalidSecret);
         }
         self.set_gist_secret_imp(secret)
             .await
-            .map_err(|_| DBusError::InvalidSecret)
+            .map_err(|_| crate::DBusError::InvalidSecret)
     }
 
-    async fn install_autostart_file(&mut self) -> Result<(), DBusError> {
+    /// ## `CreateGist(...)`
+    /// Create a remote gist with the list of local Flatpak installations and get the gist file ID
+    ///
+    /// Parameters:
+    /// - `bool`: Whether the gist will be publicly viewable
+    async fn create_gist(&mut self, public: bool) -> Result<String, crate::DBusError> {
+        self.create_gist_imp(public)
+            .await
+            .map_err(|e| crate::DBusError::GistAlreadyInitialized(e.to_string()))
+    }
+
+    /// ## `SyncGist(...)`
+    /// Synchronize local Flatpak installations with the remote gist specified in the `id` parameter and get the diff in a JSON-formatted string
+    ///
+    /// Parameters:
+    /// - `id` (nullable): Gist file ID to synchronize against
+    async fn sync_gist(&mut self, id: &str) -> Result<String, crate::DBusError> {
+        let id = match id {
+            "" => None,
+            otherwise => Some(otherwise.into()),
+        };
+
+        self.sync_gist_imp(id)
+            .await
+            .map_err(|_| crate::DBusError::SyncFailure)
+    }
+
+    async fn install_autostart_file(&mut self) -> Result<(), crate::DBusError> {
         self.install_autostart_file_imp()
             .await
-            .map_err(|_| DBusError::AutoStart)
+            .map_err(|_| crate::DBusError::AutoStart)
     }
 }
 
 impl Daemon {
-    pub async fn new() -> Result<Self, Error> {
+    pub async fn new() -> Result<Self, crate::Error> {
         let keyring = oo7::Keyring::new().await?;
         Ok(Self { keyring })
     }
@@ -54,6 +77,85 @@ impl Daemon {
             )
             .await?;
         Ok(())
+    }
+
+    pub async fn gist_secret_item(&self) -> Result<oo7::Item, crate::Error> {
+        self.keyring.unlock().await?;
+        let mut item = self
+            .keyring
+            .search_items(HashMap::from([("purpose", "gist_secret")]))
+            .await?;
+        item.pop().ok_or(crate::Error::KeychainEntryNotFound)
+    }
+
+    pub async fn gist_secret(&self) -> Result<String, crate::Error> {
+        Ok(std::str::from_utf8(&self.gist_secret_item().await?.secret().await?)?.to_string())
+    }
+
+    async fn create_gist_imp(&mut self, public: bool) -> Result<String, crate::Error> {
+        let installations = match FlatpakInstallationMap::available_installations() {
+            Ok(map) => map,
+            Err(e) => return Err(crate::Error::FlatpakInstallationQueryFailure(e)),
+        };
+
+        let secret_item = self.gist_secret_item().await?;
+        let secret = self.gist_secret().await?;
+        let mut attrs = secret_item.attributes().await?;
+
+        match attrs.get("gist_id") {
+            Some(id) => Err(crate::Error::GistAlreadyInitialized(id.clone())),
+            None => {
+                let resp = api::CreateGist::new(
+                    "List of installed Flatpaks".into(),
+                    public,
+                    json!(installations).to_string(),
+                )
+                .post(&secret)
+                .await?;
+
+                attrs.insert("gist_id".to_string(), resp.id.clone());
+
+                secret_item
+                    .set_attributes(
+                        attrs
+                            .iter()
+                            .map(|(k, v)| (k.as_ref(), v.as_ref()))
+                            .collect(),
+                    )
+                    .await?;
+
+                Ok(resp.id)
+            }
+        }
+    }
+
+    async fn sync_gist_imp(&mut self, id: Option<String>) -> Result<String, crate::Error> {
+        let local_map = match FlatpakInstallationMap::available_installations() {
+            Ok(map) => map,
+            Err(e) => return Err(crate::Error::FlatpakInstallationQueryFailure(e)),
+        };
+
+        let gh_token = self.gist_secret().await?;
+
+        let id = match id {
+            Some(id) => id,
+            None => {
+                match self
+                    .gist_secret_item()
+                    .await?
+                    .attributes()
+                    .await?
+                    .get("gist_id")
+                {
+                    Some(id) => id.to_owned(),
+                    None => return Err(crate::Error::GistIdMissing),
+                }
+            }
+        };
+
+        let remote_map = api::GetGist::new(id).get(gh_token).await?;
+
+        Ok(json!(remote_map.diff(&local_map)).to_string())
     }
 
     async fn install_autostart_file_imp(&mut self) -> Result<(), tokio::io::Error> {
