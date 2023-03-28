@@ -7,15 +7,15 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Error doing stuff with keychain")]
-    KeychainError(#[from] oo7::Error),
+    Keychain(#[from] oo7::Error),
     #[error("The specified keychain entry could not be found")]
     KeychainEntryNotFound(),
     #[error("Error querying installed flatpaks")]
     CouldntQueryInstalledFlatpaks(#[from] libflatpak::glib::Error),
     #[error("Utf8 error during conversion")]
-    Utf8Error(#[from] std::str::Utf8Error),
+    Utf8(#[from] std::str::Utf8Error),
     #[error("HTTP error")]
-    HttpError(#[from] reqwest::Error),
+    Http(#[from] reqwest::Error),
 }
 
 pub struct Impl {
@@ -82,7 +82,7 @@ impl Impl {
         match attributes.get("gist_id") {
             Some(gist_id) => {
                 let request = api::UpdateGist::new(json_data.to_string());
-                request.post(&secret, &gist_id).await?;
+                request.post(&secret, gist_id).await?;
             }
             None => {
                 let request = api::CreateGist::new(
