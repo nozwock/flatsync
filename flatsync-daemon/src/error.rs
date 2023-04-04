@@ -18,12 +18,16 @@ pub enum Error {
 
 #[derive(zbus::DBusError, Debug)]
 pub enum DBusError {
-    #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.GistAlreadyInitialized")]
-    GistAlreadyInitialized(String),
+    #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.GistCreateFailure")]
+    GistCreateFailure(String),
+    #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.GistUpdateFailure")]
+    GistUpdateFailure(String),
+    #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.GistSyncFailure")]
+    GistSyncFailure(String),
+    #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.GistApplyFailure")]
+    GistApplyFailure(String),
     #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.InvalidSecret")]
     InvalidSecret,
     #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.AutoStart")]
     AutoStart,
-    #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.SyncFailure")]
-    SyncFailure,
 }

@@ -46,7 +46,7 @@ impl CreateGist {
         CreateGist {
             description,
             public,
-            files: BTreeMap::from([("flatsync.json".to_string(), GistFile { content })]),
+            files: BTreeMap::from([(FILE_NAME.to_string(), GistFile { content })]),
         }
     }
 
@@ -67,7 +67,7 @@ impl CreateGist {
 impl UpdateGist {
     pub fn new(content: String) -> UpdateGist {
         UpdateGist {
-            files: BTreeMap::from([("flatsync".to_string(), GistFile { content })]),
+            files: BTreeMap::from([(FILE_NAME.to_string(), GistFile { content })]),
         }
     }
 

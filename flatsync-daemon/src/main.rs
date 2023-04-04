@@ -5,7 +5,7 @@ use zbus::ConnectionBuilder;
 mod api;
 mod dbus;
 mod error;
-// mod imp;
+mod traits;
 pub(crate) use error::{DBusError, Error};
 
 use log::info;

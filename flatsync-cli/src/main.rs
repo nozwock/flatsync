@@ -6,7 +6,7 @@ mod sync;
 use sync::SyncCommands;
 
 #[dbus_proxy(
-    interface = "app.drey.FlatSync.Daemon1",
+    interface = "app.drey.FlatSync.Daemon0",
     default_service = "app.drey.FlatSync.Daemon",
     default_path = "/app/drey/FlatSync/Daemon"
 )]
@@ -14,6 +14,8 @@ trait Daemon {
     async fn set_gist_secret(&self, secret: &str) -> Result<()>;
     async fn create_gist(&self, public: bool) -> Result<String>;
     async fn sync_gist(&self, id: &str) -> Result<String>;
+    async fn update_gist(&self) -> Result<()>;
+    async fn apply_gist(&self) -> Result<()>;
     async fn install_autostart_file(&self) -> Result<()>;
 }
 
@@ -28,8 +30,12 @@ struct Args {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
-    /// Initialize the FlatSync daemon and store the credentials in the keyring
+    /// Initialize the FlatSync daemon, store the credentials in the keyring, and back up the Flatpak list for the first time
     Init {
+        /// Whether to make the list publicly available for viewing by others
+        #[arg(long, default_value_t = false)]
+        public: bool,
+
         #[arg(value_name = "API_TOKEN")]
         token: String,
     },
@@ -46,15 +52,17 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    pretty_env_logger::init();
+
     let connection = Connection::session().await?;
     let proxy = DaemonProxy::new(&connection).await?;
 
     let args = Args::parse();
 
     match args.cmd {
-        Commands::Init { token } => proxy.init(token).await?,
+        Commands::Init { token, public } => proxy.init(token, public).await?,
         Commands::Sync { id, cmd } => match cmd {
-            Some(_) => todo!(),
+            Some(cmd) => cmd.route(&proxy).await?,
             None => proxy.sync(id).await?,
         },
     }

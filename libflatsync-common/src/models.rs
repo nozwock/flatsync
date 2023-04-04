@@ -8,11 +8,12 @@ use libflatpak::{
     Installation,
 };
 
-pub mod tx;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Diff, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, Diff, serde::Serialize, serde::Deserialize,
+)]
 #[diff(attr(#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]))]
 pub enum FlatpakRefKind {
+    #[default]
     App,
     Runtime,
 }
@@ -27,22 +28,22 @@ impl From<libflatpak::RefKind> for FlatpakRefKind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Diff, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Diff, serde::Serialize, serde::Deserialize)]
 #[diff(attr(#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]))]
 pub struct FlatpakRef {
-    kind: FlatpakRefKind,
-    ref_: String,
-    id: String,
-    arch: String,
-    branch: String,
-    commit: String,
-    origin: String,
+    pub kind: FlatpakRefKind,
+    pub ref_: String,
+    pub id: String,
+    pub arch: String,
+    pub branch: String,
+    pub commit: String,
+    pub origin: String,
     // AppStream metadata specific fields
-    name: Option<String>,
-    version: Option<String>,
-    license: Option<String>,
-    summary: Option<String>,
-    oars: Option<String>,
+    pub name: Option<String>,
+    pub version: Option<String>,
+    pub license: Option<String>,
+    pub summary: Option<String>,
+    pub oars: Option<String>,
 }
 
 impl<O: glib::IsA<libflatpak::InstalledRef>> From<O> for FlatpakRef {
@@ -67,9 +68,12 @@ impl<O: glib::IsA<libflatpak::InstalledRef>> From<O> for FlatpakRef {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Diff, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, Diff, serde::Serialize, serde::Deserialize,
+)]
 #[diff(attr(#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]))]
 pub enum FlatpakRemoteType {
+    #[default]
     Static,
     Usb,
     Lan,
@@ -86,18 +90,17 @@ impl From<libflatpak::RemoteType> for FlatpakRemoteType {
     }
 }
 
-#[derive(Debug, Clone, Diff, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, Clone, Diff, PartialEq, serde::Serialize, serde::Deserialize)]
 #[diff(attr(#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]))]
 pub struct FlatpakRemote {
-    type_: FlatpakRemoteType,
-    name: String,
-    title: Option<String>,
-    description: Option<String>,
-    collection_id: Option<String>,
-    gpg_verify: bool,
-    /// Note: local remotes have empty URLs
-    url: String,
-    prio: i32,
+    pub type_: FlatpakRemoteType,
+    pub name: String,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub collection_id: Option<String>,
+    pub gpg_verify: bool,
+    pub url: Option<String>,
+    pub prio: i32,
 }
 
 impl<O: glib::IsA<libflatpak::Remote>> From<O> for FlatpakRemote {
@@ -112,19 +115,52 @@ impl<O: glib::IsA<libflatpak::Remote>> From<O> for FlatpakRemote {
             description: value.description().map(|s| s.into()),
             collection_id: value.collection_id().map(|s| s.into()),
             gpg_verify: value.is_gpg_verify(),
-            url: value.url().unwrap().into(),
+            url: match &value.url().map(|s| s.to_string()).unwrap()[..] {
+                // Map empty slices to Option<String>::None
+                "" => None,
+                s => Some(s.into()),
+            },
             prio: value.prio(),
         }
     }
 }
 
-#[derive(Debug, Clone, Diff, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, Diff, serde::Serialize, serde::Deserialize,
+)]
+#[diff(attr(#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]))]
+pub enum FlatpakInstallationStorageType {
+    #[default]
+    Default,
+    Network,
+    Mmc,
+    Sdcard,
+    HardDisk,
+}
+
+impl From<libflatpak::StorageType> for FlatpakInstallationStorageType {
+    fn from(value: libflatpak::StorageType) -> Self {
+        match value {
+            libflatpak::StorageType::Default => Self::Default,
+            libflatpak::StorageType::HardDisk => Self::HardDisk,
+            libflatpak::StorageType::Sdcard => Self::Sdcard,
+            libflatpak::StorageType::Mmc => Self::Mmc,
+            libflatpak::StorageType::Network => Self::Network,
+            _ => unimplemented!(),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Diff, PartialEq, serde::Serialize, serde::Deserialize)]
 #[diff(attr(#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]))]
 pub struct FlatpakInstallation {
-    id: String,
-    path: PathBuf,
-    refs: Vec<FlatpakRef>,
-    remotes: Vec<FlatpakRemote>,
+    pub id: String,
+    pub path: PathBuf,
+    pub display_name: Option<String>,
+    pub priority: i32,
+    pub storage_type: FlatpakInstallationStorageType,
+    pub refs: Vec<FlatpakRef>,
+    pub remotes: Vec<FlatpakRemote>,
 }
 
 impl<O: glib::IsA<libflatpak::Installation>> From<O> for FlatpakInstallation {
@@ -137,6 +173,9 @@ impl<O: glib::IsA<libflatpak::Installation>> From<O> for FlatpakInstallation {
                 Some(f) => f.path().unwrap(),
                 None => Default::default(),
             },
+            display_name: value.display_name().map(|s| s.into()),
+            priority: value.priority(),
+            storage_type: value.storage_type().into(),
             refs: match value.list_installed_refs(gio::Cancellable::NONE) {
                 Ok(v) => v.into_iter().map(|item| item.into()).collect(),
                 Err(_) => vec![],
@@ -162,7 +201,7 @@ impl FlatpakInstallation {
 #[diff(attr(#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]))]
 #[repr(transparent)]
 #[serde(transparent)]
-pub struct FlatpakInstallationMap(HashMap<String, FlatpakInstallation>);
+pub struct FlatpakInstallationMap(pub HashMap<String, FlatpakInstallation>);
 
 impl FlatpakInstallationMap {
     pub fn available_installations() -> Result<Self, crate::Error> {
@@ -185,6 +224,3 @@ impl FlatpakInstallationMap {
         Ok(Self(ret))
     }
 }
-
-// FlatpakInstallationMapDiff is the expansion of `#[derive(Diff, ..)] pub struct FlatpakInstallationMap`
-impl FlatpakInstallationMapDiff {}
