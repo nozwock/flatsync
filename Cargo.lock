@@ -537,6 +537,8 @@ dependencies = [
  "anyhow",
  "clap",
  "libflatsync-common",
+ "log",
+ "pretty_env_logger",
  "serde_json",
  "tap",
  "tokio",
