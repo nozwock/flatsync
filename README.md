@@ -16,7 +16,7 @@ Since the project should be useable on Silverblue, it’d be good if the binary 
 
 # Communication
 
-* Matrix: @cogitri:gnome.org
+* Matrix: You can join the chat room [here](https://matrix.to/#/#flatsync:gnome.org)
 
 Mentor(s): [Rasmus Thomsen](https://gitlab.gnome.org/Cogitri)
 
