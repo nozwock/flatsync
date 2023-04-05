@@ -36,7 +36,7 @@ impl Impl {
         Ok(refs
             .into_iter()
             .filter_map(|r| r.name())
-            .map(|n| n.to_string())
+            .map(String::from)
             .collect())
     }
 
@@ -103,5 +103,19 @@ impl Impl {
             }
         }
         Ok(())
+    }
+
+    pub async fn fetch_gist(&self) -> Result<Option<api::FetchGistResponse>, Error> {
+        let secret_item = self.get_gist_secret_item().await?;
+        let secret = self.get_gist_secret().await?;
+        let attributes = secret_item.attributes().await?;
+        Ok(match attributes.get("gist_id") {
+            Some(gist_id) => {
+                let request = api::FetchGist::new();
+                Some(request.fetch(&secret, gist_id).await?)
+            }
+            // Wait for upload of a gist.
+            None => None,
+        })
     }
 }

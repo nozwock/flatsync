@@ -25,5 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             continue;
         }
         imp.post_gist().await?;
+        interval.tick().await;
+        let _gist = imp.fetch_gist().await?;
     }
 }
