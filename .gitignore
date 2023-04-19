@@ -10,3 +10,5 @@ src/config.rs
 .flatpak/
 vendor
 .vscode
+libflatpak-common/src/config.rs
+.flatpak-builder
