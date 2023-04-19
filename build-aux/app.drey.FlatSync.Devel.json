@@ -5,7 +5,7 @@
     "sdk": "org.gnome.Sdk",
     "sdk-extensions": [
         "org.freedesktop.Sdk.Extension.rust-stable",
-        "org.freedesktop.Sdk.Extension.llvm14"
+        "org.freedesktop.Sdk.Extension.llvm15"
     ],
     "command": "flatsync",
     "finish-args": [
@@ -33,6 +33,139 @@
         ]
     },
     "modules": [
+        {
+            "name": "flatpak",
+            "config-opts": [
+                "--disable-documentation",
+                "--disable-seccomp",
+                "--disable-sandboxed-triggers",
+                "--disable-system-helper",
+                "--with-system-install-dir=/var/lib/flatpak"
+            ],
+            "cleanup": [
+                "/etc/profile.d",
+                "/lib/systemd",
+                "/share/dbus-1/interfaces/org.freedesktop.*",
+                "/share/dbus-1/services/org.freedesktop.*",
+                "/share/gdm"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/flatpak/flatpak/releases/download/1.14.2/flatpak-1.14.2.tar.xz",
+                    "sha256": "c80711eacf42a99078f6396aa65555dd6bf73eec631776b79e9d7b7262b6f774",
+                    "x-checker-data": {
+                        "type": "json",
+                        "url": "https://api.github.com/repos/flatpak/flatpak/releases/latest",
+                        "version-query": ".tag_name",
+                        "url-query": "\"https://github.com/flatpak/flatpak/releases/download/\\($version)/flatpak-\\($version).tar.xz\""
+                    }
+                }
+            ],
+            "modules": [
+                {
+                    "name": "appstream",
+                    "buildsystem": "meson",
+                    "config-opts": [
+                        "-Dstemming=false",
+                        "-Dsystemd=false",
+                        "-Dapidocs=false",
+                        "-Dinstall-docs=false"
+                    ],
+                    "sources": [
+                        {
+                            "type": "archive",
+                            "url": "https://github.com/ximion/appstream/archive/refs/tags/v0.16.1.tar.gz",
+                            "sha256": "266c75a302064ad7e50905a365fa64537268c318cb1cf19dd003911a781d6797",
+                            "x-checker-data": {
+                                "type": "anitya",
+                                "project-id": 10385,
+                                "url-template": "https://github.com/ximion/appstream/archive/refs/tags/v$version.tar.gz"
+                            }
+                        }
+                    ],
+                    "modules": [
+                        {
+                            "name": "libxmlb",
+                            "buildsystem": "meson",
+                            "sources": [
+                                {
+                                    "type": "archive",
+                                    "url": "https://github.com/hughsie/libxmlb/archive/refs/tags/0.3.7.tar.gz",
+                                    "sha256": "fc00cdb2af69eb4a53bf6a48874c9004ee5373579eafa1dc4e53dace8b9d1251"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "libyaml",
+                            "sources": [
+                                {
+                                    "type": "archive",
+                                    "url": "https://github.com/yaml/libyaml/releases/download/0.2.5/yaml-0.2.5.tar.gz",
+                                    "sha256": "c642ae9b75fee120b2d96c712538bd2cf283228d2337df2cf2988e3c02678ef4"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "libsoup-2.4",
+                    "buildsystem": "meson",
+                    "sources": [
+                        {
+                            "type": "git",
+                            "url": "https://gitlab.gnome.org/GNOME/libsoup",
+                            "commit": "2add3502a7de754f4aed61571f6cb45094e8f443"
+                        }
+                    ]
+                },
+                {
+                    "name": "ostree",
+                    "config-opts": [
+                        "--disable-man",
+                        "--with-systemdsystemgeneratordir=/app/lib/systemd/system-generators",
+                        "--without-systemdsystemunitdir",
+                        "--with-curl"
+                    ],
+                    "cleanup": [
+                        "/etc/grub.d",
+                        "/etc/ostree",
+                        "/share/ostree",
+                        "/libexec"
+                    ],
+                    "sources": [
+                        {
+                            "type": "archive",
+                            "url": "https://github.com/ostreedev/ostree/releases/download/v2023.1/libostree-2023.1.tar.xz",
+                            "sha256": "dd792b167693a1971c9f6e3168013d906ac035100ff6c719a3b322eb44b96f55",
+                            "x-checker-data": {
+                                "type": "json",
+                                "url": "https://api.github.com/repos/ostreedev/ostree/releases/latest",
+                                "version-query": ".tag_name",
+                                "url-query": ".assets | first | .browser_download_url"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "python3-pyparsing",
+                    "cleanup": [
+                        "*"
+                    ],
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --prefix=/app pyparsing-2.4.7-py2.py3-none-any.whl"
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://files.pythonhosted.org/packages/8a/bb/488841f56197b13700afd5658fc279a2025a39e22449b7cf29864669b15d/pyparsing-2.4.7-py2.py3-none-any.whl",
+                            "sha256": "ef9d7589ef3c200abe66653d3f1ab1033c3c419ae9b9bdb1240a85b024efc88b"
+                        }
+                    ]
+                }
+            ]
+        },
         {
             "name": "flatsync",
             "buildsystem": "meson",
