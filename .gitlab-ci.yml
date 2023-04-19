@@ -33,8 +33,9 @@ clippy:
   image: "rust:alpine"
   stage: check
   script:
-    - apk add flatpak-dev gtk4.0-dev musl-dev openssl-dev
+    - apk add flatpak-dev gtk4.0-dev musl-dev openssl-dev meson desktop-file-utils
     - rustup component add clippy
+    - meson setup _build
     - cargo clippy --all
 
 rustfmt:
