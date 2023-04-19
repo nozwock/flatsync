@@ -1,3 +1,4 @@
+use libflatsync_common::diff::FlatpakInstallationMap;
 // '{"description":"Example of a gist","public":false,"files":{"README.md":{"content":"Hello World"}}}'
 use reqwest::{IntoUrl, Method, RequestBuilder};
 use serde::{Deserialize, Serialize};
@@ -20,9 +21,7 @@ impl CustomClient {
                 .request(method, url),
         }
     }
-}
 
-impl CustomClient {
     pub async fn send(self, github_token: &str) -> Result<reqwest::Response, reqwest::Error> {
         self.request
             .header("Accept", "application/vnd.github+json")
@@ -131,5 +130,12 @@ impl FetchGist {
         .await?
         .json()
         .await
+    }
+}
+
+impl FetchGistResponse {
+    pub async fn installation(&self) -> Result<FlatpakInstallationMap, reqwest::Error> {
+        let url = &self.files.get("Installed Flatpaks").unwrap().raw_url;
+        reqwest::get(url).await?.json().await
     }
 }
