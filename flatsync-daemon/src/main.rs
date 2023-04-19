@@ -1,7 +1,10 @@
+use diff::Diff;
+use libflatsync_common::diff::FlatpakInstallationMap;
 use zbus::ConnectionBuilder;
 
 mod api;
 mod dbus;
+mod error;
 mod imp;
 
 #[tokio::main]
@@ -20,12 +23,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
     loop {
         interval.tick().await;
-        if imp.get_gist_secret().await.is_err() {
+        if imp.gist_secret().await.is_err() {
             println!("No secret found");
             continue;
         }
         imp.post_gist().await?;
         interval.tick().await;
-        let _gist = imp.fetch_gist().await?;
+        if let Some(gist) = imp.fetch_gist().await? {
+            let remote = gist.installation().await?;
+            let mut local = FlatpakInstallationMap::available_installations()?;
+            let diff = remote.diff(&local);
+            local.apply(&diff);
+            // Resolve the diff, or print it for now
+            // println!("{:#?}", local);
+        }
     }
 }

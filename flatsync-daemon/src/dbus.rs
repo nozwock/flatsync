@@ -1,4 +1,4 @@
-use crate::imp::Error;
+use crate::error::Error;
 use libflatsync_common::config;
 use std::collections::HashMap;
 use std::path::Path;
