@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
         interval.tick().await;
-        if imp.gist_secret().await.is_err() {
+        if imp.get_gist_secret().await.is_err() {
             println!("No secret found");
             continue;
         }
@@ -40,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let diff = remote.diff(&local);
             local.apply(&diff);
             // Resolve the diff, or print it for now
-            // println!("{:#?}", local);
+            println!("{:#?}", local);
         }
     }
 }

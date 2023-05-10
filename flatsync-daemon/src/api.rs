@@ -2,9 +2,10 @@ use libflatsync_common::FlatpakInstallationMap;
 // '{"description":"Example of a gist","public":false,"files":{"README.md":{"content":"Hello World"}}}'
 use crate::Error;
 use reqwest::{IntoUrl, Method, RequestBuilder};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use serde_json::json;
 use std::collections::BTreeMap;
+use zbus::zvariant::Type;
 
 static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 static FILE_NAME: &str = "flatsync.json";
@@ -41,8 +42,17 @@ impl CustomClient {
     }
 }
 
+// GitHub-Gists expects us to send the content of the file as a string, not as a JSON object.
+fn content_to_string<S>(f: &FlatpakInstallationMap, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&serde_json::to_string_pretty(&f).unwrap())
+}
+
 #[derive(Serialize, Deserialize)]
 struct GistFile {
+    #[serde(serialize_with = "content_to_string")]
     content: FlatpakInstallationMap,
 }
 
@@ -69,7 +79,7 @@ pub struct FetchGistResponseFile {
     raw_url: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Type)]
 pub struct CreateGistResponse {
     pub id: String,
 }
