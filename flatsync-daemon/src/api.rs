@@ -1,13 +1,44 @@
-use const_format::formatcp;
 use libflatsync_common::FlatpakInstallationMap;
-use reqwest::header;
 // '{"description":"Example of a gist","public":false,"files":{"README.md":{"content":"Hello World"}}}'
+use reqwest::{IntoUrl, Method, RequestBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::BTreeMap;
 
-const USER_AGENT: &str = formatcp!("flatsync-daemon / {}", libflatsync_common::config::VERSION);
-const FILE_NAME: &str = "flatsync.json";
+static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+static FILE_NAME: &str = "flatsync.json";
+
+struct CustomClient {
+    request: RequestBuilder,
+}
+
+impl CustomClient {
+    pub fn new<U: IntoUrl>(method: Method, url: U) -> CustomClient {
+        CustomClient {
+            request: reqwest::Client::builder()
+                .user_agent(APP_USER_AGENT)
+                .build()
+                .unwrap()
+                .request(method, url),
+        }
+    }
+
+    pub async fn send(self, github_token: &str) -> Result<reqwest::Response, reqwest::Error> {
+        self.request
+            .header("Accept", "application/vnd.github+json")
+            .header("Authorization", format!("Bearer {}", github_token))
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .send()
+            .await
+    }
+
+    pub fn body<T: Serialize>(self, serializable: T) -> Self {
+        let serialized = json!(serializable).to_string();
+        CustomClient {
+            request: self.request.body(serialized),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 struct GistFile {
@@ -21,6 +52,22 @@ pub struct CreateGist {
     files: BTreeMap<String, GistFile>,
 }
 
+#[derive(Debug)]
+pub struct FetchGist {
+    id: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct FetchGistResponse {
+    files: BTreeMap<String, FetchGistResponseFile>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct FetchGistResponseFile {
+    filename: String,
+    raw_url: String,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct CreateGistResponse {
     pub id: String,
@@ -29,11 +76,6 @@ pub struct CreateGistResponse {
 #[derive(Serialize, Deserialize)]
 pub struct UpdateGist {
     files: BTreeMap<String, GistFile>,
-}
-
-#[derive(Debug)]
-pub struct GetGist {
-    id: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -51,16 +93,12 @@ impl CreateGist {
     }
 
     pub async fn post(&self, github_token: &str) -> Result<CreateGistResponse, reqwest::Error> {
-        let res = reqwest::Client::new()
-            .post("https://api.github.com/gists")
-            .body(json!(self).to_string())
-            .header(header::USER_AGENT, USER_AGENT)
-            .header(header::ACCEPT, "application/vnd.github+json")
-            .header(header::AUTHORIZATION, format!("Bearer {}", github_token))
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .send()
-            .await?;
-        res.json().await
+        CustomClient::new(Method::POST, "https://api.github.com/gists")
+            .body(self)
+            .send(github_token)
+            .await?
+            .json()
+            .await
     }
 }
 
@@ -72,46 +110,39 @@ impl UpdateGist {
     }
 
     pub async fn post(&self, github_token: &str, gist_id: &str) -> Result<(), reqwest::Error> {
-        reqwest::Client::new()
-            .post(&format!("https://api.github.com/gists/{}", gist_id))
-            .body(json!(self).to_string())
-            .header(header::USER_AGENT, USER_AGENT)
-            .header(header::ACCEPT, "application/vnd.github+json")
-            .header(header::AUTHORIZATION, format!("Bearer {}", github_token))
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .send()
-            .await?;
+        CustomClient::new(
+            Method::POST,
+            &format!("https://api.github.com/gists/{}", gist_id),
+        )
+        .body(self)
+        .send(github_token)
+        .await?;
 
         Ok(())
     }
 }
 
-impl GetGist {
+impl FetchGist {
     pub fn new<S: AsRef<str>>(id: S) -> Self {
         Self {
             id: id.as_ref().into(),
         }
     }
 
-    pub async fn get<S: AsRef<str>>(
+    pub async fn fetch<S: AsRef<str>>(
         &self,
         gh_token: S,
     ) -> Result<FlatpakInstallationMap, reqwest::Error> {
         // See https://docs.github.com/en/rest/gists/gists?apiVersion=2022-11-28#get-a-gist
 
-        let resp: GetGistResponse = reqwest::Client::new()
-            .get(&format!("https://api.github.com/gists/{}", self.id))
-            .header(header::USER_AGENT, USER_AGENT)
-            .header(header::ACCEPT, "application/vnd.github+json")
-            .header(
-                header::AUTHORIZATION,
-                format!("Bearer {}", gh_token.as_ref()),
-            )
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .send()
-            .await?
-            .json()
-            .await?;
+        let resp: GetGistResponse = CustomClient::new(
+            Method::GET,
+            &format!("https://api.github.com/gists/{}", self.id),
+        )
+        .send(gh_token.as_ref())
+        .await?
+        .json()
+        .await?;
 
         Ok(serde_json::from_str::<FlatpakInstallationMap>(
             &resp.files.get(FILE_NAME).unwrap().content,
