@@ -1,11 +1,13 @@
-use libflatsync_common::diff::FlatpakInstallationMap;
+use libflatsync_common::FlatpakInstallationMap;
 // '{"description":"Example of a gist","public":false,"files":{"README.md":{"content":"Hello World"}}}'
+use crate::Error;
 use reqwest::{IntoUrl, Method, RequestBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::BTreeMap;
 
 static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+static FILE_NAME: &str = "flatsync.json";
 
 struct CustomClient {
     request: RequestBuilder,
@@ -41,7 +43,7 @@ impl CustomClient {
 
 #[derive(Serialize, Deserialize)]
 struct GistFile {
-    content: String,
+    content: FlatpakInstallationMap,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -51,7 +53,10 @@ pub struct CreateGist {
     files: BTreeMap<String, GistFile>,
 }
 
-pub struct FetchGist {}
+#[derive(Debug)]
+pub struct FetchGist {
+    id: String,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct FetchGistResponse {
@@ -74,12 +79,17 @@ pub struct UpdateGist {
     files: BTreeMap<String, GistFile>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct GetGistResponse {
+    files: BTreeMap<String, GistFile>,
+}
+
 impl CreateGist {
-    pub fn new(description: String, public: bool, content: String) -> CreateGist {
+    pub fn new(description: String, public: bool, content: FlatpakInstallationMap) -> CreateGist {
         CreateGist {
             description,
             public,
-            files: BTreeMap::from([("Installed Flatpaks".to_string(), GistFile { content })]),
+            files: BTreeMap::from([(FILE_NAME.to_string(), GistFile { content })]),
         }
     }
 
@@ -94,9 +104,9 @@ impl CreateGist {
 }
 
 impl UpdateGist {
-    pub fn new(content: String) -> UpdateGist {
+    pub fn new(content: FlatpakInstallationMap) -> UpdateGist {
         UpdateGist {
-            files: BTreeMap::from([("Installed Flatpaks".to_string(), GistFile { content })]),
+            files: BTreeMap::from([(FILE_NAME.to_string(), GistFile { content })]),
         }
     }
 
@@ -114,28 +124,28 @@ impl UpdateGist {
 }
 
 impl FetchGist {
-    pub fn new() -> FetchGist {
-        FetchGist {}
+    pub fn new<S: AsRef<str>>(id: S) -> Self {
+        Self {
+            id: id.as_ref().into(),
+        }
     }
-    pub async fn fetch(
-        &self,
-        github_token: &str,
-        gist_id: &str,
-    ) -> Result<FetchGistResponse, reqwest::Error> {
-        CustomClient::new(
+
+    pub async fn fetch<S: AsRef<str>>(&self, gh_token: S) -> Result<FlatpakInstallationMap, Error> {
+        // See https://docs.github.com/en/rest/gists/gists?apiVersion=2022-11-28#get-a-gist
+
+        let mut resp: GetGistResponse = CustomClient::new(
             Method::GET,
-            &format!("https://api.github.com/gists/{}", gist_id),
+            &format!("https://api.github.com/gists/{}", self.id),
         )
-        .send(github_token)
+        .send(gh_token.as_ref())
         .await?
         .json()
-        .await
-    }
-}
+        .await?;
 
-impl FetchGistResponse {
-    pub async fn installation(&self) -> Result<FlatpakInstallationMap, reqwest::Error> {
-        let url = &self.files.get("Installed Flatpaks").unwrap().raw_url;
-        reqwest::get(url).await?.json().await
+        Ok(resp
+            .files
+            .remove(FILE_NAME)
+            .ok_or(Error::MissingGistFiles)?
+            .content)
     }
 }

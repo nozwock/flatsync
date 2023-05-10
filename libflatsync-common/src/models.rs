@@ -1,4 +1,5 @@
-use crate::{error::Error, raw};
+use std::{collections::HashMap, path::PathBuf};
+
 use diff_derive::Diff;
 use libflatpak::{
     gio::{self, traits::FileExt},
@@ -6,7 +7,6 @@ use libflatpak::{
     traits::{InstallationExt, InstalledRefExt, RefExt, RemoteExt},
     Installation,
 };
-use std::{collections::HashMap, path::PathBuf};
 
 #[derive(
     Debug, Default, Clone, Copy, PartialEq, Eq, Diff, serde::Serialize, serde::Deserialize,
@@ -189,10 +189,10 @@ impl<O: glib::IsA<libflatpak::Installation>> From<O> for FlatpakInstallation {
 }
 
 impl FlatpakInstallation {
-    pub fn user_installation() -> Result<Self, Error> {
+    pub fn user_installation() -> Result<Self, crate::Error> {
         match Installation::new_user(gio::Cancellable::NONE) {
             Ok(item) => Ok(item.into()),
-            Err(e) => Err(Error::FlatpakInstallationQueryFailure(e)),
+            Err(e) => Err(crate::Error::FlatpakInstallationQueryFailure(e)),
         }
     }
 }
@@ -204,11 +204,23 @@ impl FlatpakInstallation {
 pub struct FlatpakInstallationMap(pub HashMap<String, FlatpakInstallation>);
 
 impl FlatpakInstallationMap {
-    pub fn available_installations() -> Result<Self, Error> {
-        Ok(Self(raw::installations().map(|v| {
-            v.into_iter()
+    pub fn available_installations() -> Result<Self, crate::Error> {
+        let mut ret: HashMap<_, _> = match libflatpak::system_installations(gio::Cancellable::NONE)
+        {
+            Ok(v) => v
+                .into_iter()
                 .map(|item| (item.id().unwrap().into(), item.into()))
-                .collect()
-        })?))
+                .collect(),
+            Err(e) => return Err(crate::Error::FlatpakInstallationQueryFailure(e)),
+        };
+
+        let user_inst = match FlatpakInstallation::user_installation() {
+            Ok(inst) => (inst.id.to_owned(), inst),
+            Err(e) => return Err(e),
+        };
+
+        ret.insert(user_inst.0, user_inst.1);
+
+        Ok(Self(ret))
     }
 }

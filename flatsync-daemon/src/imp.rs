@@ -1,8 +1,8 @@
 use crate::api;
-use crate::error::Error;
-use libflatsync_common::diff::FlatpakInstallationMap;
-use serde_json::json;
+use crate::Error;
+use libflatsync_common::FlatpakInstallationMap;
 use std::collections::HashMap;
+
 pub struct Impl {
     keyring: oo7::Keyring,
 }
@@ -26,20 +26,23 @@ impl Impl {
     }
 
     pub async fn post_gist(&self) -> Result<(), Error> {
-        let payload = json!(FlatpakInstallationMap::available_installations()
-            .map_err(Error::FlatpakInstallationQueryFailure)?)
-        .to_string();
+        let payload = FlatpakInstallationMap::available_installations()
+            .map_err(Error::FlatpakInstallationQueryFailure)?;
         let secret_item = self.gist_secret_item().await?;
         let secret = self.gist_secret().await?;
         let mut attributes = secret_item.attributes().await?;
         match attributes.get("gist_id") {
             Some(gist_id) => {
+                // TODO check if the gist exists
                 let request = api::UpdateGist::new(payload);
                 request.post(&secret, gist_id).await?;
             }
             None => {
-                let request =
-                    api::CreateGist::new("List of installed flatpaks".to_string(), false, payload);
+                let request = api::CreateGist::new(
+                    "Installed Flatpaks and its remote repositories".to_string(),
+                    false,
+                    payload,
+                );
                 let resp = request.post(&secret).await?;
                 attributes.insert("gist_id".to_string(), resp.id);
                 secret_item
@@ -55,14 +58,14 @@ impl Impl {
         Ok(())
     }
 
-    pub async fn fetch_gist(&self) -> Result<Option<api::FetchGistResponse>, Error> {
+    pub async fn fetch_gist(&self) -> Result<Option<FlatpakInstallationMap>, Error> {
         let secret_item = self.gist_secret_item().await?;
         let secret = self.gist_secret().await?;
         let attributes = secret_item.attributes().await?;
         Ok(match attributes.get("gist_id") {
             Some(gist_id) => {
-                let request = api::FetchGist::new();
-                Some(request.fetch(&secret, gist_id).await?)
+                let request = api::FetchGist::new(gist_id);
+                Some(request.fetch(&secret).await?)
             }
             // Wait for upload of a gist.
             None => None,

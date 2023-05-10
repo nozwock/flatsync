@@ -1,5 +1,9 @@
 #[rustfmt::skip]
 pub mod config;
-pub mod diff;
-pub mod error;
-pub mod raw;
+
+mod error;
+
+pub use error::Error;
+
+pub mod models;
+pub use models::*;
