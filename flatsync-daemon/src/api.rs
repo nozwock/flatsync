@@ -1,5 +1,6 @@
 use libflatsync_common::FlatpakInstallationMap;
 // '{"description":"Example of a gist","public":false,"files":{"README.md":{"content":"Hello World"}}}'
+use crate::Error;
 use reqwest::{IntoUrl, Method, RequestBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -42,7 +43,7 @@ impl CustomClient {
 
 #[derive(Serialize, Deserialize)]
 struct GistFile {
-    content: String,
+    content: FlatpakInstallationMap,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -84,7 +85,7 @@ pub struct GetGistResponse {
 }
 
 impl CreateGist {
-    pub fn new(description: String, public: bool, content: String) -> CreateGist {
+    pub fn new(description: String, public: bool, content: FlatpakInstallationMap) -> CreateGist {
         CreateGist {
             description,
             public,
@@ -103,7 +104,7 @@ impl CreateGist {
 }
 
 impl UpdateGist {
-    pub fn new(content: String) -> UpdateGist {
+    pub fn new(content: FlatpakInstallationMap) -> UpdateGist {
         UpdateGist {
             files: BTreeMap::from([(FILE_NAME.to_string(), GistFile { content })]),
         }
@@ -129,13 +130,10 @@ impl FetchGist {
         }
     }
 
-    pub async fn fetch<S: AsRef<str>>(
-        &self,
-        gh_token: S,
-    ) -> Result<FlatpakInstallationMap, reqwest::Error> {
+    pub async fn fetch<S: AsRef<str>>(&self, gh_token: S) -> Result<FlatpakInstallationMap, Error> {
         // See https://docs.github.com/en/rest/gists/gists?apiVersion=2022-11-28#get-a-gist
 
-        let resp: GetGistResponse = CustomClient::new(
+        let mut resp: GetGistResponse = CustomClient::new(
             Method::GET,
             &format!("https://api.github.com/gists/{}", self.id),
         )
@@ -144,9 +142,10 @@ impl FetchGist {
         .json()
         .await?;
 
-        Ok(serde_json::from_str::<FlatpakInstallationMap>(
-            &resp.files.get(FILE_NAME).unwrap().content,
-        )
-        .unwrap())
+        Ok(resp
+            .files
+            .remove(FILE_NAME)
+            .ok_or(Error::MissingGistFiles)?
+            .content)
     }
 }

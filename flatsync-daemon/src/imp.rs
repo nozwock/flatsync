@@ -1,7 +1,6 @@
 use crate::api;
 use crate::Error;
 use libflatsync_common::FlatpakInstallationMap;
-use serde_json::json;
 use std::collections::HashMap;
 
 pub struct Impl {
@@ -27,9 +26,8 @@ impl Impl {
     }
 
     pub async fn post_gist(&self) -> Result<(), Error> {
-        let payload = json!(FlatpakInstallationMap::available_installations()
-            .map_err(Error::FlatpakInstallationQueryFailure)?)
-        .to_string();
+        let payload = FlatpakInstallationMap::available_installations()
+            .map_err(Error::FlatpakInstallationQueryFailure)?;
         let secret_item = self.gist_secret_item().await?;
         let secret = self.gist_secret().await?;
         let mut attributes = secret_item.attributes().await?;

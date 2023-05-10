@@ -135,7 +135,7 @@ impl Daemon {
                 let resp = api::CreateGist::new(
                     "List of installed Flatpaks".into(),
                     public,
-                    json!(installations).to_string(),
+                    installations,
                 )
                 .post(&secret)
                 .await?;
@@ -195,7 +195,7 @@ impl Daemon {
         let secret = self.gist_secret().await?;
 
         match secret_item.attributes().await?.get("gist_id") {
-            Some(id) => Ok(api::UpdateGist::new(json!(installations).to_string())
+            Some(id) => Ok(api::UpdateGist::new(installations)
                 .post(&secret, id)
                 .await?),
             None => Err(Error::GistIdMissing),

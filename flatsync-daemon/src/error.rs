@@ -14,6 +14,8 @@ pub enum Error {
     Utf8Failure(#[from] std::str::Utf8Error),
     #[error("Encountered HTTP error: {}", 0)]
     HttpFailure(#[from] reqwest::Error),
+    #[error("Missing files in gist")]
+    MissingGistFiles,
 }
 
 #[derive(zbus::DBusError, Debug)]
