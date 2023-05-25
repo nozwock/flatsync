@@ -3,6 +3,7 @@ subdir('resources')
 # Desktop file
 desktop_conf = configuration_data()
 desktop_conf.set('icon', application_id)
+
 desktop_file = i18n.merge_file(
   type: 'desktop',
   input: configure_file(
@@ -16,21 +17,18 @@ desktop_file = i18n.merge_file(
   install_dir: datadir / 'applications'
 )
 
-configured_autostart_file = configure_file(
-  input: 'app.drey.FlatSync.Autostart.desktop.in.in',
-  output: '@BASENAME@',
-  configuration: desktop_conf,
-)
-
 autostart_desktop_file = i18n.merge_file(
-  input: configured_autostart_file,
-  output: '@BASENAME@',
   type: 'desktop',
-  po_dir: '../po',
+  input: configure_file(
+    input: '@0@.Autostart.desktop.in.in'.format(base_id),
+    output: '@BASENAME@',
+    configuration: desktop_conf
+  ),
+  output: '@0@.Autostart.desktop'.format(application_id),
+  po_dir: podir,
   install: true,
-  install_dir: get_option('datadir') / 'applications',
+  install_dir: datadir / 'applications'
 )
-
 
 # Validate Desktop file
 if desktop_file_validate.found()
@@ -38,9 +36,10 @@ if desktop_file_validate.found()
     'validate-desktop',
     desktop_file_validate,
     args: [
-      desktop_file.full_path()
+      desktop_file.full_path(),
+      autostart_desktop_file.full_path()
     ],
-    depends: desktop_file,
+    depends: [ desktop_file, autostart_desktop_file ],
   )
 endif
 
