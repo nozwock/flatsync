@@ -1,5 +1,17 @@
 subdir('icons')
 subdir('resources')
+
+dbus_service_conf = configuration_data()
+dbus_service_conf.set('BINARY_PATH', bindir / 'flatsync-daemon')
+
+configure_file(
+  input: '@0@.Daemon.service.in'.format(base_id),
+  output: '@BASENAME@',
+  configuration: dbus_service_conf,
+  install: true,
+  install_dir: datadir / 'dbus-1' / 'services',
+)
+
 # Desktop file
 desktop_conf = configuration_data()
 desktop_conf.set('icon', application_id)

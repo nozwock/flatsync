@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=app.drey.FlatSync.Daemon
+Exec=@BINARY_PATH@

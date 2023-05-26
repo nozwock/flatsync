@@ -14,7 +14,8 @@
         "--device=dri",
         "--env=RUST_LOG=flatsync=debug",
         "--env=G_MESSAGES_DEBUG=none",
-        "--env=RUST_BACKTRACE=1"
+        "--env=RUST_BACKTRACE=1",
+        "--own-name=app.drey.FlatSync.Daemon"
     ],
     "build-options": {
         "append-path": "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm15/bin",
