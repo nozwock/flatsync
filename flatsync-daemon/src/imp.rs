@@ -122,7 +122,7 @@ impl Impl {
         })
     }
 
-    pub async fn install_autostart_file(&self) -> Result<(), Error> {
+    pub async fn autostart_file(&self, install: bool) -> Result<(), Error> {
         let autostart_desktop_file = Path::new(config::AUTOSTART_DESKTOP_FILE_PATH);
         let desktop_file_name = autostart_desktop_file
             .file_name()
@@ -132,12 +132,16 @@ impl Impl {
 
         let mut autostart_user_folder = glib::user_config_dir();
         autostart_user_folder.push("autostart");
-        if !autostart_user_folder.exists() {
+        let mut autostart_file = autostart_user_folder.clone();
+        autostart_file.push(desktop_file_name);
+        if install {
             fs::create_dir_all(&autostart_user_folder).await?;
-        }
-        autostart_user_folder.push(desktop_file_name);
-        if !autostart_user_folder.exists() {
-            fs::copy(autostart_desktop_file, autostart_user_folder).await?;
+            if !autostart_user_folder.exists() {
+                fs::create_dir_all(&autostart_user_folder).await?;
+            }
+            fs::copy(autostart_desktop_file, autostart_file).await?;
+        } else if autostart_file.exists() {
+            fs::remove_file(autostart_file).await?;
         }
         Ok(())
     }

@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use zbus::{dbus_proxy, Connection, Result};
 
+mod autostart;
 mod init;
 mod sync;
 use sync::SyncCommands;
@@ -16,14 +17,11 @@ trait Daemon {
     async fn sync_gist(&self, id: &str) -> Result<String>;
     async fn update_gist(&self) -> Result<()>;
     async fn apply_gist(&self) -> Result<()>;
-    async fn install_autostart_file(&self) -> Result<()>;
+    async fn autostart_file(&self, install: bool) -> Result<()>;
 }
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(short, long, default_value_t = false)]
-    autostart: bool,
-
     #[command(subcommand)]
     cmd: Commands,
 }
@@ -48,6 +46,11 @@ enum Commands {
         #[command(subcommand)]
         cmd: Option<SyncCommands>,
     },
+    Autostart {
+        /// Whether to install the autostart file
+        #[arg(long, default_value_t = false)]
+        uninstall: bool,
+    },
 }
 
 #[tokio::main]
@@ -65,10 +68,7 @@ async fn main() -> anyhow::Result<()> {
             Some(cmd) => cmd.route(&proxy).await?,
             None => proxy.sync(id).await?,
         },
-    }
-
-    if args.autostart {
-        proxy.install_autostart_file().await?;
+        Commands::Autostart { uninstall } => proxy.autostart(uninstall).await?,
     }
 
     Ok(())
