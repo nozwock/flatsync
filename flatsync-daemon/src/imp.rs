@@ -135,7 +135,6 @@ impl Impl {
         let mut autostart_file = autostart_user_folder.clone();
         autostart_file.push(desktop_file_name);
         if install {
-            fs::create_dir_all(&autostart_user_folder).await?;
             if !autostart_user_folder.exists() {
                 fs::create_dir_all(&autostart_user_folder).await?;
             }
