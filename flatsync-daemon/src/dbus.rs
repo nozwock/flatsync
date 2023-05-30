@@ -54,9 +54,9 @@ impl Daemon {
             })
     }
 
-    async fn install_autostart_file(&mut self) -> Result<(), DBusError> {
+    async fn autostart_file(&mut self, install: bool) -> Result<(), DBusError> {
         self.imp
-            .install_autostart_file()
+            .autostart_file(install)
             .await
             .map_err(|_| DBusError::AutoStartFailure)
     }

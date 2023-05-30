@@ -28,3 +28,4 @@ thiserror = "1"
 glib = "0.17"
 libflatsync-common = { path = "../libflatsync-common" }
 diff-struct = "0.5"
+ashpd = { version = "0.4.0", default-features = false, features = ["tokio"] }

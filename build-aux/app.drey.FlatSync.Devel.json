@@ -15,6 +15,7 @@
         "--env=RUST_LOG=flatsync=debug",
         "--env=G_MESSAGES_DEBUG=none",
         "--env=RUST_BACKTRACE=1",
+        "--own-name=app.drey.FlatSync.Daemon",
         "--share=network",
         "--filesystem=xdg-data/flatpak:ro",
         "--filesystem=/var/lib/flatpak:ro"

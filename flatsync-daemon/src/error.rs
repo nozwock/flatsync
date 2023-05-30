@@ -18,6 +18,8 @@ pub enum Error {
     MissingGistFiles,
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("ASHPD error: {0}")]
+    AshpdFailure(#[from] ashpd::Error),
 }
 
 #[derive(zbus::DBusError, Debug)]
