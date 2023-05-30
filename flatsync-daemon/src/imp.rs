@@ -123,38 +123,50 @@ impl Impl {
         })
     }
 
+    async fn autostart_file_sanbox(&self, install: bool) -> Result<(), Error> {
+        // `dbus_activatable` has to be set to false, otherwise this doesn't work for some reason.
+        // I guess this has something to do with the fact that in our D-Bus service file we call `app.drey.FlatSync.Daemon` instead of `app.drey.FlatSync`?
+        Background::request()
+            .reason("Enable autostart for FlatSync's daemon")
+            .auto_start(install)
+            .command(&["flatsync-daemon"])
+            .dbus_activatable(false)
+            .send()
+            .await?;
+
+        Ok(())
+    }
+
+    async fn autostart_file_native(&self, install: bool) -> Result<(), Error> {
+        let autostart_desktop_file = Path::new(config::AUTOSTART_DESKTOP_FILE_PATH);
+        let desktop_file_name = autostart_desktop_file
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap();
+
+        let mut autostart_user_folder = glib::user_config_dir();
+        autostart_user_folder.push("autostart");
+        let mut autostart_file = autostart_user_folder.clone();
+        autostart_file.push(desktop_file_name);
+        if install {
+            if !autostart_user_folder.exists() {
+                fs::create_dir_all(&autostart_user_folder).await?;
+            }
+            fs::copy(autostart_desktop_file, autostart_file).await?;
+        } else if autostart_file.exists() {
+            fs::remove_file(autostart_file).await?;
+        }
+
+        Ok(())
+    }
+
     pub async fn autostart_file(&self, install: bool) -> Result<(), Error> {
         // We currently still need the non-Portal version of this for native builds, as those don't work properly with the Portal APIs.
         if ashpd::is_sandboxed().await {
-            // `dbus_activatable` has to be set to false, otherwise this doesn't work for some reason.
-            // I guess this has something to do with the fact that in our D-Bus service file we call `app.drey.FlatSync.Daemon` instead of `app.drey.FlatSync`?
-            Background::request()
-                .reason("Enable autostart for FlatSync's daemon")
-                .auto_start(install)
-                .command(&["flatsync-daemon"])
-                .dbus_activatable(false)
-                .send()
-                .await?;
+            self.autostart_file_sanbox(install).await?;
         } else {
-            let autostart_desktop_file = Path::new(config::AUTOSTART_DESKTOP_FILE_PATH);
-            let desktop_file_name = autostart_desktop_file
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap();
-
-            let mut autostart_user_folder = glib::user_config_dir();
-            autostart_user_folder.push("autostart");
-            let mut autostart_file = autostart_user_folder.clone();
-            autostart_file.push(desktop_file_name);
-            if install {
-                if !autostart_user_folder.exists() {
-                    fs::create_dir_all(&autostart_user_folder).await?;
-                }
-                fs::copy(autostart_desktop_file, autostart_file).await?;
-            } else if autostart_file.exists() {
-                fs::remove_file(autostart_file).await?;
-            }
+            self.autostart_file_native(install).await?;
         }
 
         Ok(())
