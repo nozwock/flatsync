@@ -9,6 +9,7 @@ mod error;
 pub use error::DBusError;
 pub use error::Error;
 mod imp;
+mod settings;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

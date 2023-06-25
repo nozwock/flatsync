@@ -3,11 +3,20 @@ use log::info;
 use crate::DaemonProxy;
 
 impl DaemonProxy<'_> {
-    pub(crate) async fn init<S: AsRef<str>>(&self, token: S, public: bool) -> anyhow::Result<()> {
+    pub(crate) async fn init<S: AsRef<str>>(
+        &self,
+        token: S,
+        public: bool,
+        gist_id: Option<String>,
+    ) -> anyhow::Result<()> {
         self.set_gist_secret(token.as_ref()).await?;
 
-        let id = self.create_gist(public).await?;
-        info!("Successfully created a Flatsync list with id: {:?}", id);
+        if let Some(id) = gist_id {
+            self.set_gist_id(id.as_ref()).await?;
+        } else {
+            let id = self.create_gist(public).await?;
+            info!("Successfully created a Flatsync list with id: {:?}", id);
+        }
 
         Ok(())
     }
