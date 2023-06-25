@@ -1,6 +1,6 @@
-use crate::api;
 use crate::api::CreateGistResponse;
 use crate::Error;
+use crate::{api, settings::Settings};
 use ashpd::desktop::background::Background;
 use libflatsync_common::{config, FlatpakInstallationMap};
 use std::{collections::HashMap, path::Path};
@@ -16,7 +16,7 @@ impl Impl {
         Ok(Self { keyring })
     }
 
-    pub async fn get_gist_secret_item(&self) -> Result<oo7::Item, Error> {
+    async fn get_gist_secret_item(&self) -> Result<oo7::Item, Error> {
         self.keyring.unlock().await?;
         let mut item = self
             .keyring
@@ -45,10 +45,9 @@ impl Impl {
     pub async fn post_gist(&self) -> Result<(), Error> {
         let payload = FlatpakInstallationMap::available_installations()
             .map_err(Error::FlatpakInstallationQueryFailure)?;
-        let secret_item = self.get_gist_secret_item().await?;
         let secret = self.get_gist_secret().await?;
-        let mut attributes = secret_item.attributes().await?;
-        match attributes.get("gist_id") {
+        let gist_id = Settings::instance().get_gist_id();
+        match gist_id.as_ref() {
             Some(gist_id) => {
                 // TODO check if the gist exists
                 let request = api::UpdateGist::new(payload);
@@ -61,26 +60,16 @@ impl Impl {
                     payload,
                 );
                 let resp = request.post(&secret).await?;
-                attributes.insert("gist_id".to_string(), resp.id);
-                secret_item
-                    .set_attributes(
-                        attributes
-                            .iter()
-                            .map(|(k, v)| (k.as_str(), v.as_str()))
-                            .collect(),
-                    )
-                    .await?;
+                Settings::instance().set_gist_id(&resp.id);
             }
         }
         Ok(())
     }
 
     pub async fn create_gist(&self, public: bool) -> Result<CreateGistResponse, Error> {
-        let secret_item = self.get_gist_secret_item().await?;
         let secret = self.get_gist_secret().await?;
-        let mut attributes = secret_item.attributes().await?;
-
-        match attributes.get("gist_id") {
+        let gist_id = Settings::instance().get_gist_id();
+        match gist_id {
             None => {
                 let installations = FlatpakInstallationMap::available_installations()
                     .map_err(Error::FlatpakInstallationQueryFailure)?;
@@ -92,28 +81,18 @@ impl Impl {
                 .post(&secret)
                 .await?;
 
-                attributes.insert("gist_id".to_string(), resp.id.clone());
-
-                secret_item
-                    .set_attributes(
-                        attributes
-                            .iter()
-                            .map(|(k, v)| (k.as_str(), v.as_str()))
-                            .collect(),
-                    )
-                    .await?;
+                Settings::instance().set_gist_id(&resp.id);
 
                 Ok(resp)
             }
-            Some(id) => Err(Error::GistAlreadyInitialized(id.to_string())),
+            Some(id) => Err(Error::GistAlreadyInitialized(id)),
         }
     }
 
     pub async fn fetch_gist(&self) -> Result<Option<FlatpakInstallationMap>, Error> {
-        let secret_item = self.get_gist_secret_item().await?;
         let secret = self.get_gist_secret().await?;
-        let attributes = secret_item.attributes().await?;
-        Ok(match attributes.get("gist_id") {
+        let gist_id = Settings::instance().get_gist_id();
+        Ok(match gist_id {
             Some(gist_id) => {
                 let request = api::FetchGist::new(gist_id);
                 Some(request.fetch(&secret).await?)

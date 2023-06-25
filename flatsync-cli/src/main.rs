@@ -18,6 +18,7 @@ trait Daemon {
     async fn update_gist(&self) -> Result<()>;
     async fn apply_gist(&self) -> Result<()>;
     async fn autostart_file(&self, install: bool) -> Result<()>;
+    async fn set_gist_id(&self, id: &str) -> Result<()>;
 }
 
 #[derive(Parser, Debug)]
@@ -36,6 +37,9 @@ enum Commands {
 
         #[arg(value_name = "API_TOKEN")]
         token: String,
+
+        #[arg(long)]
+        gist_id: Option<String>,
     },
     /// Synchronize with the gist file
     Sync {
@@ -63,7 +67,11 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     match args.cmd {
-        Commands::Init { token, public } => proxy.init(token, public).await?,
+        Commands::Init {
+            token,
+            public,
+            gist_id,
+        } => proxy.init(token, public, gist_id).await?,
         Commands::Sync { id, cmd } => match cmd {
             Some(cmd) => cmd.route(&proxy).await?,
             None => proxy.sync(id).await?,

@@ -1,5 +1,6 @@
 use crate::api::CreateGistResponse;
 use crate::imp::Impl;
+use crate::settings::Settings;
 use crate::DBusError;
 use log::info;
 use tap::Tap;
@@ -52,6 +53,12 @@ impl Daemon {
                     info!("Gist successfully updated")
                 }
             })
+    }
+
+    async fn set_gist_id(&self, id: &str) -> Result<(), DBusError> {
+        Settings::instance().set_gist_id(id);
+
+        Ok(())
     }
 
     async fn autostart_file(&mut self, install: bool) -> Result<(), DBusError> {
