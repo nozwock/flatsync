@@ -30,3 +30,4 @@ libflatsync-common = { path = "../libflatsync-common" }
 diff-struct = "0.5"
 ashpd = { version = "0.4.0", default-features = false, features = ["tokio"] }
 delegate = "0.9.0"
+chrono = { version = "0.4", features = ["serde"] }

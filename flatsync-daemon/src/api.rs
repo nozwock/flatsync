@@ -1,4 +1,4 @@
-use libflatsync_common::FlatpakInstallationMap;
+use libflatsync_common::FlatpakInstallationPayload;
 // '{"description":"Example of a gist","public":false,"files":{"README.md":{"content":"Hello World"}}}'
 use crate::Error;
 use reqwest::{IntoUrl, Method, RequestBuilder};
@@ -43,14 +43,14 @@ impl CustomClient {
 }
 
 // GitHub-Gists expects us to send the content of the file as a string, not as a JSON object.
-fn content_to_string<S>(f: &FlatpakInstallationMap, serializer: S) -> Result<S::Ok, S::Error>
+fn content_to_string<S>(f: &FlatpakInstallationPayload, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
     serializer.serialize_str(&serde_json::to_string_pretty(&f).unwrap())
 }
 
-fn string_to_content<'de, D>(deserializer: D) -> Result<FlatpakInstallationMap, D::Error>
+fn string_to_content<'de, D>(deserializer: D) -> Result<FlatpakInstallationPayload, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -62,7 +62,7 @@ where
 struct GistFile {
     #[serde(serialize_with = "content_to_string")]
     #[serde(deserialize_with = "string_to_content")]
-    content: FlatpakInstallationMap,
+    content: FlatpakInstallationPayload,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -104,7 +104,11 @@ pub struct GetGistResponse {
 }
 
 impl CreateGist {
-    pub fn new(description: String, public: bool, content: FlatpakInstallationMap) -> CreateGist {
+    pub fn new(
+        description: String,
+        public: bool,
+        content: FlatpakInstallationPayload,
+    ) -> CreateGist {
         CreateGist {
             description,
             public,
@@ -123,7 +127,7 @@ impl CreateGist {
 }
 
 impl UpdateGist {
-    pub fn new(content: FlatpakInstallationMap) -> UpdateGist {
+    pub fn new(content: FlatpakInstallationPayload) -> UpdateGist {
         UpdateGist {
             files: BTreeMap::from([(FILE_NAME.to_string(), GistFile { content })]),
         }
@@ -149,7 +153,10 @@ impl FetchGist {
         }
     }
 
-    pub async fn fetch<S: AsRef<str>>(&self, gh_token: S) -> Result<FlatpakInstallationMap, Error> {
+    pub async fn fetch<S: AsRef<str>>(
+        &self,
+        gh_token: S,
+    ) -> Result<FlatpakInstallationPayload, Error> {
         // See https://docs.github.com/en/rest/gists/gists?apiVersion=2022-11-28#get-a-gist
 
         let mut resp: GetGistResponse = CustomClient::new(
