@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use std::{collections::HashMap, path::PathBuf};
 
 use diff_derive::Diff;
@@ -222,5 +223,23 @@ impl FlatpakInstallationMap {
         ret.insert(user_inst.0, user_inst.1);
 
         Ok(Self(ret))
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FlatpakInstallationPayload {
+    pub installations: FlatpakInstallationMap,
+    pub altered_at: DateTime<Utc>,
+}
+
+impl FlatpakInstallationPayload {
+    pub fn new() -> Result<FlatpakInstallationPayload, crate::Error> {
+        let installations = FlatpakInstallationMap::available_installations()?;
+        let altered_at = Utc::now();
+
+        Ok(Self {
+            installations,
+            altered_at,
+        })
     }
 }

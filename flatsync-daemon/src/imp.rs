@@ -2,7 +2,7 @@ use crate::api::CreateGistResponse;
 use crate::Error;
 use crate::{api, settings::Settings};
 use ashpd::desktop::background::Background;
-use libflatsync_common::{config, FlatpakInstallationMap};
+use libflatsync_common::{config, FlatpakInstallationPayload};
 use std::{collections::HashMap, path::Path};
 use tokio::fs;
 
@@ -43,8 +43,8 @@ impl Impl {
     }
 
     pub async fn post_gist(&self) -> Result<(), Error> {
-        let payload = FlatpakInstallationMap::available_installations()
-            .map_err(Error::FlatpakInstallationQueryFailure)?;
+        let payload =
+            FlatpakInstallationPayload::new().map_err(Error::FlatpakInstallationQueryFailure)?;
         let secret = self.get_gist_secret().await?;
         let gist_id = Settings::instance().get_gist_id();
         match gist_id.as_ref() {
@@ -71,15 +71,12 @@ impl Impl {
         let gist_id = Settings::instance().get_gist_id();
         match gist_id {
             None => {
-                let installations = FlatpakInstallationMap::available_installations()
+                let payload = FlatpakInstallationPayload::new()
                     .map_err(Error::FlatpakInstallationQueryFailure)?;
-                let resp = api::CreateGist::new(
-                    "List of installed Flatpaks".into(),
-                    public,
-                    installations,
-                )
-                .post(&secret)
-                .await?;
+                let resp =
+                    api::CreateGist::new("List of installed Flatpaks".into(), public, payload)
+                        .post(&secret)
+                        .await?;
 
                 Settings::instance().set_gist_id(&resp.id);
 
@@ -89,7 +86,7 @@ impl Impl {
         }
     }
 
-    pub async fn fetch_gist(&self) -> Result<Option<FlatpakInstallationMap>, Error> {
+    pub async fn fetch_gist(&self) -> Result<Option<FlatpakInstallationPayload>, Error> {
         let secret = self.get_gist_secret().await?;
         let gist_id = Settings::instance().get_gist_id();
         Ok(match gist_id {

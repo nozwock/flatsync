@@ -16,3 +16,4 @@ thiserror = "1"
 diff_derive = "0.2.3"
 serde_json = "1"
 serde = "1"
+chrono = { version = "0.4", features = ["serde"] }

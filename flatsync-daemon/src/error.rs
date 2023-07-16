@@ -2,6 +2,8 @@
 pub enum Error {
     #[error("Error while querying Flatpak installations: {0}")]
     FlatpakInstallationQueryFailure(libflatsync_common::Error),
+    #[error("Error while interacting with local Flatpak installation file: {0}")]
+    FlatpakInstallationFileFailure(String),
     #[error("FlatSync gist is already initialized with ID: {0}")]
     GistAlreadyInitialized(String),
     #[error("Gist uninitialized yet no gist ID was provided when attempting to sync")]
