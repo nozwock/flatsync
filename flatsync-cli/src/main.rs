@@ -13,7 +13,7 @@ use sync::SyncCommands;
 )]
 trait Daemon {
     async fn set_gist_secret(&self, secret: &str) -> Result<()>;
-    async fn create_gist(&self, public: bool) -> Result<String>;
+    async fn create_gist(&self) -> Result<String>;
     async fn sync_gist(&self, id: &str) -> Result<String>;
     async fn update_gist(&self) -> Result<()>;
     async fn apply_gist(&self) -> Result<()>;
@@ -31,10 +31,6 @@ struct Args {
 enum Commands {
     /// Initialize the FlatSync daemon, store the credentials in the keyring, and back up the Flatpak list for the first time
     Init {
-        /// Whether to make the list publicly available for viewing by others
-        #[arg(long, default_value_t = false)]
-        public: bool,
-
         #[arg(value_name = "API_TOKEN")]
         token: String,
 
@@ -67,11 +63,7 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     match args.cmd {
-        Commands::Init {
-            token,
-            public,
-            gist_id,
-        } => proxy.init(token, public, gist_id).await?,
+        Commands::Init { token, gist_id } => proxy.init(token, gist_id).await?,
         Commands::Sync { id, cmd } => match cmd {
             Some(cmd) => cmd.route(&proxy).await?,
             None => proxy.sync(id).await?,

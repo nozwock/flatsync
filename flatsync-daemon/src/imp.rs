@@ -1,102 +1,61 @@
-use crate::api::CreateGistResponse;
-use crate::Error;
-use crate::{api, settings::Settings};
+use crate::{
+    data_sinks::{data_sink::DataSink, GitHubGistDataSink},
+    Error,
+};
 use ashpd::desktop::background::Background;
 use libflatsync_common::{config, FlatpakInstallationPayload};
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 use tokio::fs;
 
 pub struct Impl {
-    keyring: oo7::Keyring,
+    client: Box<dyn DataSink + 'static + Send + Sync>,
 }
 
 impl Impl {
     pub async fn new() -> Result<Self, Error> {
-        let keyring = oo7::Keyring::new().await?;
-        Ok(Self { keyring })
-    }
-
-    async fn get_gist_secret_item(&self) -> Result<oo7::Item, Error> {
-        self.keyring.unlock().await?;
-        let mut item = self
-            .keyring
-            .search_items(HashMap::from([("purpose", "gist_secret")]))
-            .await?;
-        item.pop().ok_or(Error::KeychainEntryNotFound)
-    }
-
-    pub async fn get_gist_secret(&self) -> Result<String, Error> {
-        Ok(std::str::from_utf8(&self.get_gist_secret_item().await?.secret().await?)?.to_string())
+        Ok(Self {
+            client: Box::new(GitHubGistDataSink::new().await?),
+        })
     }
 
     pub async fn set_gist_secret(&self, secret: &str) -> Result<(), Error> {
-        self.keyring.unlock().await?;
-        self.keyring
-            .create_item(
-                "GitHub Gists token",
-                HashMap::from([("purpose", "gist_secret")]),
-                secret,
-                true,
-            )
-            .await?;
-        Ok(())
+        self.client.set_secret(secret).await
+    }
+
+    pub fn set_gist_id(&self, id: &str) {
+        self.client.set_sink_id(id);
     }
 
     pub async fn post_gist(&self) -> Result<(), Error> {
         let payload =
             FlatpakInstallationPayload::new().map_err(Error::FlatpakInstallationQueryFailure)?;
-        let secret = self.get_gist_secret().await?;
-        let gist_id = Settings::instance().get_gist_id();
-        match gist_id.as_ref() {
-            Some(gist_id) => {
-                // TODO check if the gist exists
-                let request = api::UpdateGist::new(payload);
-                request.post(&secret, gist_id).await?;
-            }
-            None => {
-                let request = api::CreateGist::new(
-                    "Installed Flatpaks and its remote repositories".to_string(),
-                    false,
-                    payload,
-                );
-                let resp = request.post(&secret).await?;
-                Settings::instance().set_gist_id(&resp.id);
-            }
+        if !self.client.is_initialised() {
+            return Err(Error::GistIdMissing);
         }
+
+        self.client.update(payload).await?;
         Ok(())
     }
 
-    pub async fn create_gist(&self, public: bool) -> Result<CreateGistResponse, Error> {
-        let secret = self.get_gist_secret().await?;
-        let gist_id = Settings::instance().get_gist_id();
-        match gist_id {
-            None => {
-                let payload = FlatpakInstallationPayload::new()
-                    .map_err(Error::FlatpakInstallationQueryFailure)?;
-                let resp =
-                    api::CreateGist::new("List of installed Flatpaks".into(), public, payload)
-                        .post(&secret)
-                        .await?;
-
-                Settings::instance().set_gist_id(&resp.id);
-
-                Ok(resp)
-            }
-            Some(id) => Err(Error::GistAlreadyInitialized(id)),
+    pub async fn create_gist(&self) -> Result<String, Error> {
+        if self.client.is_initialised() {
+            return Err(Error::GistAlreadyInitialized(self.client.sink_id()));
         }
+
+        let payload =
+            FlatpakInstallationPayload::new().map_err(Error::FlatpakInstallationQueryFailure)?;
+        self.client.create(payload).await?;
+        Ok(self.client.sink_id())
     }
 
     pub async fn fetch_gist(&self) -> Result<Option<FlatpakInstallationPayload>, Error> {
-        let secret = self.get_gist_secret().await?;
-        let gist_id = Settings::instance().get_gist_id();
-        Ok(match gist_id {
-            Some(gist_id) => {
-                let request = api::FetchGist::new(gist_id);
-                Some(request.fetch(&secret).await?)
-            }
-            // Wait for upload of a gist.
-            None => None,
-        })
+        let val = if self.client.is_initialised() {
+            Some(self.client.fetch().await?)
+        } else {
+            None
+        };
+
+        Ok(val)
     }
 
     async fn autostart_file_sanbox(&self, install: bool) -> Result<(), Error> {

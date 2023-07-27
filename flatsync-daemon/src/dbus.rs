@@ -1,7 +1,4 @@
-use crate::api::CreateGistResponse;
-use crate::imp::Impl;
-use crate::settings::Settings;
-use crate::DBusError;
+use crate::{imp::Impl, DBusError};
 use log::info;
 use tap::Tap;
 use zbus::dbus_interface;
@@ -31,12 +28,9 @@ impl Daemon {
 
     /// ## `CreateGist(...)`
     /// Create a remote gist with the list of local Flatpak installations and get the gist file ID
-    ///
-    /// Parameters:
-    /// - `bool`: Whether the gist will be publicly viewable
-    async fn create_gist(&mut self, public: bool) -> Result<CreateGistResponse, DBusError> {
+    async fn create_gist(&mut self) -> Result<String, DBusError> {
         self.imp
-            .create_gist(public)
+            .create_gist()
             .await
             .map_err(|e| DBusError::GistCreateFailure(e.to_string()))
     }
@@ -56,7 +50,7 @@ impl Daemon {
     }
 
     async fn set_gist_id(&self, id: &str) -> Result<(), DBusError> {
-        Settings::instance().set_gist_id(id);
+        self.imp.set_gist_id(id);
 
         Ok(())
     }
