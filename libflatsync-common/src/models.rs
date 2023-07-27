@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use diff::Diff;
-use std::{collections::HashMap, fmt, path::PathBuf};
+use std::{collections::BTreeMap, fmt, path::PathBuf};
 
 use libflatpak::{
     gio::{self, traits::FileExt},
@@ -185,7 +185,9 @@ pub struct FlatpakInstallation {
     pub remotes: Vec<FlatpakRemote>,
 }
 
-#[derive(Hash, Debug, Clone, Copy, serde::Serialize, serde::Deserialize, Eq, PartialEq)]
+#[derive(
+    Hash, Debug, Clone, Copy, serde::Serialize, serde::Deserialize, Eq, PartialEq, PartialOrd, Ord,
+)]
 pub enum FlatpakInstallationKind {
     #[serde(rename = "user")]
     User,
@@ -250,11 +252,11 @@ impl FlatpakInstallation {
 #[diff(attr(#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]))]
 #[repr(transparent)]
 #[serde(transparent)]
-pub struct FlatpakInstallationMap(pub HashMap<FlatpakInstallationKind, FlatpakInstallation>);
+pub struct FlatpakInstallationMap(pub BTreeMap<FlatpakInstallationKind, FlatpakInstallation>);
 
 impl FlatpakInstallationMap {
     pub fn available_installations() -> Result<Self, crate::Error> {
-        let mut ret: HashMap<_, _> = match libflatpak::system_installations(gio::Cancellable::NONE)
+        let mut ret: BTreeMap<_, _> = match libflatpak::system_installations(gio::Cancellable::NONE)
         {
             Ok(v) => v
                 .into_iter()
