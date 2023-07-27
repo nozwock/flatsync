@@ -11,10 +11,3 @@ config = configure_file(
   output: 'config.rs',
   configuration: global_conf
 )
-# Copy the config.rs output to the source directory.
-run_command(
-  'cp',
-  meson.current_build_dir() / 'config.rs',
-  meson.current_source_dir() / 'config.rs',
-  check: true
-)

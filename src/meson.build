@@ -1,4 +1,4 @@
-build_targets = [ 'flatsync', 'flatsync-cli', 'flatsync-daemon' ]
+build_targets = [ 'flatsync-cli', 'flatsync-daemon' ]
 
 cargo_options = [ '--manifest-path', meson.project_source_root() / 'Cargo.toml' ]
 cargo_options += [ '--target-dir', meson.project_build_root() / 'src' ]
@@ -12,7 +12,10 @@ else
   message('Building in debug mode')
 endif
 
-cargo_env = [ 'CARGO_HOME=' + meson.project_build_root() / 'cargo-home' ]
+cargo_env = [
+  'CARGO_HOME=' + meson.project_build_root() / 'cargo-home',
+  'CODEGEN_BUILD_DIR=' + meson.build_root() / 'libflatsync-common' / 'src',
+]
 
 cargo_options_mut = cargo_options
 
