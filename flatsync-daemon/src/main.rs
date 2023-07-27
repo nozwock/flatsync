@@ -1,5 +1,4 @@
-use log::debug;
-use log::{error, info};
+use log::{debug, info, warn};
 use zbus::ConnectionBuilder;
 
 mod context;
@@ -58,18 +57,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         info!("Pushed local changes to remote")
                     } else {
                         info!("Remote is newer, updating local state...");
-                        // TODO: Apply diff
                         ctx.install_to_system(&remote)?;
                         info!("Updated local state");
                     }
                 }
             }
+            Ok(None) => {
+                debug!("Fetching remote returned empty result");
+            }
             Err(e) => {
-                // TODO: Filter for different error types
-                error!("{:?}", e);
+                debug!("Error fetching remote: {:?}", e);
+                if let Error::HttpFailure(e) = e {
+                    if e.is_timeout() {
+                        warn!("Connection timed out trying to fetch remote, are you online?");
+                    }
+                }
                 continue;
             }
-            _ => {}
         }
     }
 }
