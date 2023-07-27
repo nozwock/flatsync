@@ -280,6 +280,10 @@ impl FlatpakInstallationMap {
 
         Ok(Self(ret))
     }
+
+    pub fn get(&self, kind: FlatpakInstallationKind) -> Option<&FlatpakInstallation> {
+        self.0.get(&kind)
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -297,5 +301,9 @@ impl FlatpakInstallationPayload {
             installations,
             altered_at,
         })
+    }
+
+    pub fn installations(&self, kind: FlatpakInstallationKind) -> Option<&FlatpakInstallation> {
+        self.installations.get(kind)
     }
 }

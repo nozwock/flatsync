@@ -1,7 +1,9 @@
 use crate::Error;
 use diff::Diff;
 use libflatpak::{gio, prelude::*};
-use libflatsync_common::{FlatpakInstallationKind, FlatpakInstallationPayload, FlatpakRef};
+use libflatsync_common::{
+    FlatpakInstallationKind, FlatpakInstallationPayload, FlatpakRef, FlatpakRemote,
+};
 use log::{debug, trace};
 use std::path::PathBuf;
 
@@ -42,7 +44,7 @@ impl Context {
                 "Local installations changed, timestamps:\nCurrent: {:?}\nMember: {:?}",
                 cur.altered_at, self.local_installations.altered_at
             );
-            self.set_cache_and_file(&cur)?;
+            self.set_cache_and_file(cur)?;
         }
 
         Ok(())
@@ -183,14 +185,14 @@ impl Context {
         flatsync_user_data_dir
     }
 
-    fn set_cache_and_file(&mut self, payload: &FlatpakInstallationPayload) -> Result<(), Error> {
-        self.local_installations = payload.clone();
+    fn set_cache_and_file(&mut self, payload: FlatpakInstallationPayload) -> Result<(), Error> {
+        self.local_installations = payload;
         Self::installations_to_file(&self.local_installations)?;
         Ok(())
     }
 
     fn is_installed(&self, kind: FlatpakInstallationKind, id: &str) -> Result<bool, Error> {
-        let apps = self.local_installations.installations.0.get(&kind).unwrap();
+        let apps = self.local_installations.installations(kind).unwrap();
         Ok(apps.refs.iter().any(|ref_| ref_.ref_ == id))
     }
 
@@ -231,12 +233,38 @@ impl Context {
         })
     }
 
+    fn add_remote(
+        &self,
+        remote: &FlatpakRemote,
+        installation: &libflatpak::Installation,
+    ) -> Result<(), Error> {
+        // No need to install local repositories...
+        if let Some(true) = remote.url.as_ref().map(|u| u.starts_with("file://")) {
+            return Ok(());
+        }
+
+        log::debug!("Adding remote {}", &remote.name);
+
+        let flatpak_remote: libflatpak::Remote = remote.into();
+        // FIXME: This is a hack to get around the fact that we don't have a GPG key for the
+        // Flatpak repo.
+        flatpak_remote.set_gpg_verify(false);
+        installation
+            .add_remote(&flatpak_remote, true, gio::Cancellable::NONE)
+            .map_err(|e| Error::FlatpakRemoteAddFailed(remote.name.clone(), e.to_string()))?;
+        installation
+            .update_remote_sync(&remote.name, gio::Cancellable::NONE)
+            .map_err(|e| Error::FlatpakRemoteRefreshFailed(remote.name.clone(), e.to_string()))?;
+
+        Ok(())
+    }
+
     fn install_for_kind(
         &self,
         remote: &FlatpakInstallationPayload,
         kind: FlatpakInstallationKind,
     ) -> Result<(), Error> {
-        let remote_installations = match remote.installations.0.get(&kind) {
+        let remote_installations = match remote.installations.get(kind) {
             Some(e) => Ok(e),
             None => Err(Error::FlatpakNoSuchInstallation),
         }?;
@@ -258,25 +286,7 @@ impl Context {
         };
 
         for remote in &remote_installations.remotes {
-            // No need to install local repositories...
-            if let Some(true) = remote.url.as_ref().map(|u| u.starts_with("file://")) {
-                continue;
-            }
-
-            log::debug!("Adding remote {}", &remote.name);
-
-            let flatpak_remote: libflatpak::Remote = remote.into();
-            // FIXME: This is a hack to get around the fact that we don't have a GPG key for the
-            // Flatpak repo.
-            flatpak_remote.set_gpg_verify(false);
-            installation
-                .add_remote(&flatpak_remote, true, gio::Cancellable::NONE)
-                .map_err(|e| Error::FlatpakRemoteAddFailed(remote.name.clone(), e.to_string()))?;
-            installation
-                .update_remote_sync(&remote.name, gio::Cancellable::NONE)
-                .map_err(|e| {
-                    Error::FlatpakRemoteRefreshFailed(remote.name.clone(), e.to_string())
-                })?;
+            self.add_remote(remote, &installation)?;
         }
 
         for ref_ in &remote_installations.refs {
@@ -294,7 +304,7 @@ impl Context {
             FlatpakInstallationPayload::new().map_err(Error::FlatpakInstallationQueryFailure)?;
         local.altered_at = remote.altered_at;
         log::debug!("Done updating local state, refreshing cache");
-        self.set_cache_and_file(&local)?;
+        self.set_cache_and_file(local)?;
         Ok(())
     }
 }
