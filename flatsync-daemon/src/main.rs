@@ -1,3 +1,4 @@
+use log::debug;
 use log::{error, info, trace};
 use zbus::ConnectionBuilder;
 
@@ -37,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             continue;
         }
 
-        ctx.update_local_installations()?;
+        ctx.refresh_local_installations()?;
 
         let res = imp.fetch_gist().await;
 
@@ -50,6 +51,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let altered_remote = remote.altered_at;
                     let altered_local = ctx.get_local_altered_at();
 
+                    debug!(
+                        "Remote altered at: {:?}\nLocal altered at: {:?}",
+                        altered_remote, altered_local
+                    );
+
                     // local is newer, so we push to remote
                     // otherwise, we apply the remote's changes
                     if altered_local > altered_remote {
@@ -57,8 +63,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         imp.post_gist().await?;
                         info!("Pushed local changes to remote")
                     } else {
-                        info!("Remote is newer");
+                        info!("Remote is newer, updating local state...");
                         // TODO: Apply diff
+                        ctx.install_to_system(&remote)?;
+                        info!("Updated local state");
                     }
                 }
             }

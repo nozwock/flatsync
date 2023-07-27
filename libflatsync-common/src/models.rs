@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
-use std::{collections::HashMap, path::PathBuf};
+use diff::Diff;
+use std::{collections::HashMap, fmt, path::PathBuf};
 
-use diff_derive::Diff;
 use libflatpak::{
     gio::{self, traits::FileExt},
     glib::{self, Cast},
@@ -126,6 +126,27 @@ impl<O: glib::IsA<libflatpak::Remote>> From<O> for FlatpakRemote {
     }
 }
 
+impl From<&FlatpakRemote> for libflatpak::Remote {
+    fn from(remote: &FlatpakRemote) -> Self {
+        let ret = libflatpak::Remote::new(&remote.name);
+        if let Some(val) = &remote.title {
+            ret.set_title(val);
+        }
+        if let Some(val) = &remote.description {
+            ret.set_description(val);
+        }
+        if let Some(val) = &remote.url {
+            ret.set_url(val);
+        }
+
+        ret.set_collection_id(remote.collection_id.as_deref());
+        ret.set_gpg_verify(remote.gpg_verify);
+        ret.set_prio(remote.prio);
+
+        ret
+    }
+}
+
 #[derive(
     Debug, Default, Clone, Copy, PartialEq, Eq, Diff, serde::Serialize, serde::Deserialize,
 )]
@@ -162,6 +183,33 @@ pub struct FlatpakInstallation {
     pub storage_type: FlatpakInstallationStorageType,
     pub refs: Vec<FlatpakRef>,
     pub remotes: Vec<FlatpakRemote>,
+}
+
+#[derive(Hash, Debug, Clone, Copy, serde::Serialize, serde::Deserialize, Eq, PartialEq)]
+pub enum FlatpakInstallationKind {
+    #[serde(rename = "user")]
+    User,
+    #[serde(rename = "default")]
+    System,
+}
+
+impl FlatpakInstallationKind {
+    pub fn try_from_str(s: &str) -> Result<Self, crate::Error> {
+        match s {
+            "user" => Ok(Self::User),
+            "default" => Ok(Self::System),
+            _ => Err(crate::Error::InvalidFlatpakInstallationKind(s.into())),
+        }
+    }
+}
+
+impl fmt::Display for FlatpakInstallationKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::User => write!(f, "user"),
+            Self::System => write!(f, "default"),
+        }
+    }
 }
 
 impl<O: glib::IsA<libflatpak::Installation>> From<O> for FlatpakInstallation {
@@ -202,7 +250,7 @@ impl FlatpakInstallation {
 #[diff(attr(#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]))]
 #[repr(transparent)]
 #[serde(transparent)]
-pub struct FlatpakInstallationMap(pub HashMap<String, FlatpakInstallation>);
+pub struct FlatpakInstallationMap(pub HashMap<FlatpakInstallationKind, FlatpakInstallation>);
 
 impl FlatpakInstallationMap {
     pub fn available_installations() -> Result<Self, crate::Error> {
@@ -210,13 +258,21 @@ impl FlatpakInstallationMap {
         {
             Ok(v) => v
                 .into_iter()
-                .map(|item| (item.id().unwrap().into(), item.into()))
+                .map(|item| {
+                    (
+                        FlatpakInstallationKind::try_from_str(item.id().unwrap().as_str()).unwrap(),
+                        item.into(),
+                    )
+                })
                 .collect(),
             Err(e) => return Err(crate::Error::FlatpakInstallationQueryFailure(e)),
         };
 
         let user_inst = match FlatpakInstallation::user_installation() {
-            Ok(inst) => (inst.id.to_owned(), inst),
+            Ok(inst) => (
+                FlatpakInstallationKind::try_from_str(inst.id.as_str()).unwrap(),
+                inst,
+            ),
             Err(e) => return Err(e),
         };
 

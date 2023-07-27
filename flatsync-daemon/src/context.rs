@@ -1,6 +1,7 @@
 use crate::Error;
 use diff::Diff;
-use libflatsync_common::FlatpakInstallationPayload;
+use libflatpak::{gio, prelude::*};
+use libflatsync_common::{FlatpakInstallationKind, FlatpakInstallationPayload, FlatpakRef};
 use log::{debug, trace};
 use std::path::PathBuf;
 
@@ -28,11 +29,11 @@ impl Context {
         })
     }
 
-    /// ## `update_local_installations()`
+    /// ## `refresh_local_installations()`
     /// Gets the current local installations and compares them to the `local_installations` member.
     ///
     /// Updates the `local_installations` member of the `Context` struct aswell as the local file's content, should they differ.
-    pub fn update_local_installations(&mut self) -> Result<(), Error> {
+    pub fn refresh_local_installations(&mut self) -> Result<(), Error> {
         let cur =
             FlatpakInstallationPayload::new().map_err(Error::FlatpakInstallationQueryFailure)?;
 
@@ -41,8 +42,7 @@ impl Context {
                 "Local installations changed, timestamps:\nCurrent: {:?}\nMember: {:?}",
                 cur.altered_at, self.local_installations.altered_at
             );
-            self.local_installations = cur;
-            Self::installations_to_file(&self.local_installations)?;
+            self.set_cache_and_file(&cur)?;
         }
 
         Ok(())
@@ -181,5 +181,120 @@ impl Context {
         flatsync_user_data_dir.push("flatsync");
 
         flatsync_user_data_dir
+    }
+
+    fn set_cache_and_file(&mut self, payload: &FlatpakInstallationPayload) -> Result<(), Error> {
+        self.local_installations = payload.clone();
+        Self::installations_to_file(&self.local_installations)?;
+        Ok(())
+    }
+
+    fn is_installed(&self, kind: FlatpakInstallationKind, id: &str) -> Result<bool, Error> {
+        let apps = self.local_installations.installations.0.get(&kind).unwrap();
+        Ok(apps.refs.iter().any(|ref_| ref_.ref_ == id))
+    }
+
+    fn install_ref(
+        &self,
+        installation: &libflatpak::Installation,
+        kind: FlatpakInstallationKind,
+        ref_: &FlatpakRef,
+    ) -> Result<(), Error> {
+        let transaction =
+            libflatpak::Transaction::for_installation(installation, gio::Cancellable::NONE)
+                .unwrap();
+
+        if self.is_installed(kind, &ref_.ref_)? {
+            return Ok(());
+        }
+
+        if let Err(e) = transaction.add_install(&ref_.origin, &ref_.ref_, &[]) {
+            log::error!("Couldn't install reference {}: {}", ref_.ref_, e);
+            return Ok(());
+        }
+
+        log::debug!(
+            "Operations for ref {}: {:?}",
+            ref_.id,
+            transaction
+                .operations()
+                .iter()
+                .map(|s| s.get_ref().unwrap().as_str().to_string())
+                .collect::<Vec<String>>()
+        );
+
+        transaction.run(gio::Cancellable::NONE).map_err(|e| {
+            Error::FlatpakInstallationFailed(
+                ref_.name.as_deref().unwrap().to_string(),
+                e.to_string(),
+            )
+        })
+    }
+
+    fn install_for_kind(
+        &self,
+        remote: &FlatpakInstallationPayload,
+        kind: FlatpakInstallationKind,
+    ) -> Result<(), Error> {
+        let remote_installations = match remote.installations.0.get(&kind) {
+            Some(e) => Ok(e),
+            None => Err(Error::FlatpakNoSuchInstallation),
+        }?;
+
+        let installation = match kind {
+            FlatpakInstallationKind::User => {
+                // User Installation
+                let mut user_path = glib::home_dir();
+                user_path.push(".local");
+                user_path.push("share");
+                user_path.push("flatpak");
+                let file = gio::File::for_path(user_path);
+
+                libflatpak::Installation::for_path(&file, true, gio::Cancellable::NONE).unwrap()
+            }
+            FlatpakInstallationKind::System => {
+                libflatpak::Installation::new_system(gio::Cancellable::NONE).unwrap()
+            }
+        };
+
+        for remote in &remote_installations.remotes {
+            // No need to install local repositories...
+            if let Some(true) = remote.url.as_ref().map(|u| u.starts_with("file://")) {
+                continue;
+            }
+
+            log::debug!("Adding remote {}", &remote.name);
+
+            let flatpak_remote: libflatpak::Remote = remote.into();
+            // FIXME: This is a hack to get around the fact that we don't have a GPG key for the
+            // Flatpak repo.
+            flatpak_remote.set_gpg_verify(false);
+            installation
+                .add_remote(&flatpak_remote, true, gio::Cancellable::NONE)
+                .map_err(|e| Error::FlatpakRemoteAddFailed(remote.name.clone(), e.to_string()))?;
+            installation
+                .update_remote_sync(&remote.name, gio::Cancellable::NONE)
+                .map_err(|e| {
+                    Error::FlatpakRemoteRefreshFailed(remote.name.clone(), e.to_string())
+                })?;
+        }
+
+        for ref_ in &remote_installations.refs {
+            self.install_ref(&installation, kind, ref_)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn install_to_system(&mut self, remote: &FlatpakInstallationPayload) -> Result<(), Error> {
+        self.install_for_kind(remote, FlatpakInstallationKind::System)?;
+        self.install_for_kind(remote, FlatpakInstallationKind::User)?;
+
+        let mut local =
+            FlatpakInstallationPayload::new().map_err(Error::FlatpakInstallationQueryFailure)?;
+        local.altered_at = remote.altered_at;
+        log::debug!("Done updating local state, refreshing cache");
+        self.set_cache_and_file(&local)?;
+        Ok(())
     }
 }

@@ -9,6 +9,5 @@ src/config.rs
 *.ui~
 .flatpak/
 vendor
-.vscode
 libflatsync-common/src/config.rs
 .flatpak-builder

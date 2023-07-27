@@ -1,0 +1,168 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'libflatsync-common'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=libflatsync-common"
+                ],
+                "filter": {
+                    "name": "libflatsync-common",
+                    "kind": "lib"
+                },
+                "env": {
+                    "CODEGEN_BUILD_DIR": "${workspaceFolder}/build/libflatsync-common/src"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'flatsync-daemon'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=flatsync-daemon",
+                    "--package=flatsync-daemon"
+                ],
+                "filter": {
+                    "name": "flatsync-daemon",
+                    "kind": "bin"
+                },
+                "env": {
+                    "CODEGEN_BUILD_DIR": "${workspaceFolder}/build/libflatsync-common/src"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "RUST_LOG": "trace"
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'flatsync-daemon'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=flatsync-daemon",
+                    "--package=flatsync-daemon"
+                ],
+                "filter": {
+                    "name": "flatsync-daemon",
+                    "kind": "bin"
+                },
+                "env": {
+                    "CODEGEN_BUILD_DIR": "${workspaceFolder}/build/libflatsync-common/src"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'flatsync-cli'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=flatsync-cli",
+                    "--package=flatsync-cli"
+                ],
+                "filter": {
+                    "name": "flatsync-cli",
+                    "kind": "bin"
+                },
+                "env": {
+                    "CODEGEN_BUILD_DIR": "${workspaceFolder}/build/libflatsync-common/src"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "RUST_LOG": "trace"
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'flatsync-cli'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=flatsync-cli",
+                    "--package=flatsync-cli"
+                ],
+                "filter": {
+                    "name": "flatsync-cli",
+                    "kind": "bin"
+                },
+                "env": {
+                    "CODEGEN_BUILD_DIR": "${workspaceFolder}/build/libflatsync-common/src"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'flatsync'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=flatsync",
+                    "--package=flatsync"
+                ],
+                "filter": {
+                    "name": "flatsync",
+                    "kind": "bin"
+                },
+                "env": {
+                    "CODEGEN_BUILD_DIR": "${workspaceFolder}/build/libflatsync-common/src"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "RUST_LOG": "trace"
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'flatsync'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=flatsync",
+                    "--package=flatsync"
+                ],
+                "filter": {
+                    "name": "flatsync",
+                    "kind": "bin"
+                },
+                "env": {
+                    "CODEGEN_BUILD_DIR": "${workspaceFolder}/build/libflatsync-common/src"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

@@ -1,0 +1,27 @@
+{
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/*/**": true,
+        "**/.hg/store/**": true,
+        ".flatpak/**": true,
+        ".flatpak-builder/**": true,
+        "_build/**": true,
+        "build/**": true
+    },
+    "rust-analyzer.files.excludeDirs": [
+        ".flatpak",
+        ".flatpak-builder",
+        "build",
+        "_build"
+    ],
+    "rust-analyzer.cargo.extraEnv": {
+        "CODEGEN_BUILD_DIR": "${workspaceFolder}/build/libflatsync-common/src"
+    },
+    "rust-analyzer.check.command": "clippy",
+    "terminal.integrated.env.linux": {
+        "RUST_BACKTRACE": "1",
+        "RUST_LOG": "trace",
+        "CODEGEN_BUILD_DIR": "${workspaceFolder}/build/libflatsync-common/src"
+    }
+}
