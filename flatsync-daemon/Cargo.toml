@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-trait = "0.1.72"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 libflatpak = { version = "0.3.0", features = ["v1_13_3"] }
 zbus = { version = "3.11.0", features = ["tokio"], default-features = false }

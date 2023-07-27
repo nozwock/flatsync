@@ -6,7 +6,7 @@
         {
             "label": "meson configure",
             "type": "shell",
-            "command": "meson setup build",
+            "command": "meson setup build -Dprofile=development",
             "presentation": {
                 "reveal": "never",
                 "panel": "shared"

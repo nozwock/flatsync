@@ -25,19 +25,6 @@ impl Settings {
             )
         }
     }
-
-    pub fn get_gist_id(&self) -> Option<String> {
-        let res: String = self.get("gist-id");
-
-        match res.as_str() {
-            "" => None,
-            _ => Some(res),
-        }
-    }
-
-    pub fn set_gist_id(&self, gist_id: &str) {
-        self.set("gist-id", gist_id).unwrap();
-    }
 }
 
 #[allow(dead_code)]
@@ -61,9 +48,9 @@ impl Settings {
 
             fn enum_(&self, key: &str) -> i32;
 
-            fn get<U: glib::FromVariant>(&self, key: &str) -> U;
+            pub fn get<U: glib::FromVariant>(&self, key: &str) -> U;
 
-            fn set(&self, key: &str, value: impl Into<Variant>) -> Result<(), glib::BoolError>;
+            pub fn set(&self, key: &str, value: impl Into<Variant>) -> Result<(), glib::BoolError>;
 
             fn set_enum(&self, key: &str, value: i32) -> Result<(), glib::BoolError>;
 

@@ -1,9 +1,9 @@
 use log::debug;
-use log::{error, info, trace};
+use log::{error, info};
 use zbus::ConnectionBuilder;
 
-mod api;
 mod context;
+mod data_sinks;
 mod dbus;
 mod error;
 pub use error::DBusError;
@@ -33,13 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
         interval.tick().await;
-        if imp.get_gist_secret().await.is_err() {
-            error!("No secret found");
-            continue;
-        }
-
         ctx.refresh_local_installations()?;
-
         let res = imp.fetch_gist().await;
 
         match res {
@@ -72,7 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Err(e) => {
                 // TODO: Filter for different error types
-                trace!("{:?}", e);
+                error!("{:?}", e);
                 continue;
             }
             _ => {}

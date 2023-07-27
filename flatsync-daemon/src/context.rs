@@ -205,6 +205,9 @@ impl Context {
         let transaction =
             libflatpak::Transaction::for_installation(installation, gio::Cancellable::NONE)
                 .unwrap();
+        transaction.add_default_dependency_sources();
+        // Since we're a background application, we don't want to annoy the user
+        transaction.set_no_interaction(true);
 
         if self.is_installed(kind, &ref_.ref_)? {
             return Ok(());
@@ -213,6 +216,14 @@ impl Context {
         if let Err(e) = transaction.add_install(&ref_.origin, &ref_.ref_, &[]) {
             log::error!("Couldn't install reference {}: {}", ref_.ref_, e);
             return Ok(());
+        }
+
+        if let Err(e) = transaction.add_update(&ref_.ref_, &[], Some(&ref_.commit)) {
+            log::error!(
+                "Couldn't select the commit {}, falling back to latest: {}",
+                &ref_.commit,
+                e
+            );
         }
 
         log::debug!(
