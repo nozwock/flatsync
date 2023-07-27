@@ -3,7 +3,6 @@ use crate::imp::Impl;
 use crate::settings::Settings;
 use crate::DBusError;
 use log::info;
-use tap::Tap;
 use zbus::dbus_interface;
 
 pub struct Daemon {
@@ -47,12 +46,9 @@ impl Daemon {
         self.imp
             .post_gist()
             .await
-            .map_err(|e| DBusError::GistUpdateFailure(e.to_string()))
-            .tap(|r| {
-                if r.is_ok() {
-                    info!("Gist successfully updated")
-                }
-            })
+            .map_err(|e| DBusError::GistUpdateFailure(e.to_string()))?;
+        info!("Gist successfully updated");
+        Ok(())
     }
 
     async fn set_gist_id(&self, id: &str) -> Result<(), DBusError> {
