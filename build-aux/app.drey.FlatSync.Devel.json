@@ -14,7 +14,6 @@
         "--socket=fallback-x11",
         "--socket=wayland",
         "--device=dri",
-        "--filesystem=host",
         "--own-name=app.drey.FlatSync.Daemon",
         /* Flatpak permissions */
         "--filesystem=/var/lib/flatpak/",
