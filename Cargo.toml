@@ -7,19 +7,14 @@ edition = "2021"
 [dependencies]
 gettext-rs = { version = "0.7", features = ["gettext-system"] }
 gtk = { version = "0.6", package = "gtk4" }
+libflatsync-common = { path = "libflatsync-common" }
 log = "0.4"
 once_cell = "1.14"
 pretty_env_logger = "0.5"
 zbus = { version = "3.11.0", default-features = false, features = ["tokio"] }
-libflatsync-common = { path = "libflatsync-common" }
-
 
 [workspace]
-members = [
-    "libflatsync-common",
-    "flatsync-daemon",
-    "flatsync-cli",
-]
+members = ["libflatsync-common", "flatsync-daemon", "flatsync-cli"]
 
 [profile.release]
 lto = true

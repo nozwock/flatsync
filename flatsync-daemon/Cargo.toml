@@ -7,26 +7,26 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.72"
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+anyhow = "1"
+ashpd = { version = "0.4.0", default-features = false, features = ["tokio"] }
+chrono = { version = "0.4", features = ["serde"] }
+delegate = "0.10.0"
+diff-struct = "0.5"
+glib = "0.17"
 libflatpak = { version = "0.3.0", features = ["v1_13_3"] }
-zbus = { version = "3.11.0", features = ["tokio"], default-features = false }
+libflatsync-common = { path = "../libflatsync-common" }
+log = "0.4"
 oo7 = { version = "0.1.0-beta.3", default-features = false, features = [
   "tokio",
   "openssl_crypto",
 ] }
-serde_json = "1"
-serde = "1"
+pretty_env_logger = "0.5"
 reqwest = { version = "0.11", features = [
   "json",
   "native-tls",
 ], default-features = false }
-log = "0.4"
-pretty_env_logger = "0.5"
-anyhow = "1"
+serde = "1"
+serde_json = "1"
 thiserror = "1"
-glib = "0.17"
-libflatsync-common = { path = "../libflatsync-common" }
-diff-struct = "0.5"
-ashpd = { version = "0.4.0", default-features = false, features = ["tokio"] }
-delegate = "0.10.0"
-chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+zbus = { version = "3.11.0", features = ["tokio"], default-features = false }
