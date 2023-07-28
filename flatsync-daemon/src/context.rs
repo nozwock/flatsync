@@ -104,7 +104,11 @@ impl Context {
         })?;
         let local_installations_file_path = Self::get_local_installations_file();
 
-        trace!("Writing to file: {:?}", local_installations_file_path);
+        trace!(
+            "Writing to file '{:?}': {:?}",
+            local_installations_file_path,
+            serialized
+        );
 
         std::fs::write(local_installations_file_path, serialized)
             .map_err(|e| Error::FlatpakInstallationFileFailure(e.to_string()))?;
@@ -124,12 +128,12 @@ impl Context {
             ));
         }
 
-        let file = std::fs::File::open(file_path)?;
+        let file = std::fs::File::open(&file_path)?;
         let reader = std::io::BufReader::new(file);
         let file_payload: FlatpakInstallationPayload = serde_json::from_reader(reader)
             .map_err(|e| Error::FlatpakInstallationFileFailure(e.to_string()))?;
 
-        trace!("Read from file: {:?}", file_payload);
+        trace!("Read from file '{:?}': {:?}", file_path, file_payload);
 
         Ok(file_payload)
     }
@@ -227,12 +231,13 @@ impl Context {
         }
 
         log::debug!(
-            "Operations for ref {}: {:?}",
+            "Operations for ref {} with kind {}: {:?}",
             ref_.id,
+            kind,
             transaction
                 .operations()
                 .iter()
-                .map(|s| s.get_ref().unwrap().as_str().to_string())
+                .map(|s| s.get_ref().unwrap().into())
                 .collect::<Vec<String>>()
         );
 
