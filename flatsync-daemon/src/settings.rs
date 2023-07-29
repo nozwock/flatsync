@@ -1,10 +1,12 @@
 use glib::{IsA, Variant};
 use libflatpak::gio::{self, prelude::*};
+use std::sync::Once;
 
 #[derive(Clone, Debug)]
 pub struct Settings(gio::Settings);
 
 static mut SETTINGS: Option<Settings> = None;
+static SETTINGS_INIT: Once = Once::new();
 
 impl Default for Settings {
     fn default() -> Self {
@@ -15,14 +17,10 @@ impl Default for Settings {
 impl Settings {
     pub fn instance() -> Self {
         unsafe {
-            SETTINGS.as_ref().map_or_else(
-                || {
-                    let settings = Self(gio::Settings::new("app.drey.FlatSync.Devel"));
-                    SETTINGS = Some(settings.clone());
-                    settings
-                },
-                std::clone::Clone::clone,
-            )
+            SETTINGS_INIT.call_once(|| {
+                SETTINGS = Some(Self(gio::Settings::new("app.drey.FlatSync.Devel")));
+            });
+            SETTINGS.clone().unwrap()
         }
     }
 }
