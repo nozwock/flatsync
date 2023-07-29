@@ -1,13 +1,13 @@
 use log::info;
 
-use crate::DaemonProxy;
+use crate::dbus::DaemonProxy;
 
 impl DaemonProxy<'_> {
-    pub(crate) async fn init<S: AsRef<str>>(
+    pub async fn init<S: AsRef<str>>(
         &self,
         token: S,
         gist_id: Option<String>,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), zbus::Error> {
         self.set_gist_secret(token.as_ref()).await?;
 
         if let Some(id) = gist_id {

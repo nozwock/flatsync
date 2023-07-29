@@ -659,7 +659,6 @@ dependencies = [
 name = "flatsync-cli"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "clap",
  "libflatsync-common",
  "log",
@@ -1400,10 +1399,13 @@ dependencies = [
  "diff-struct",
  "diff_derive",
  "libflatpak",
+ "log",
  "oo7",
+ "pretty_env_logger",
  "serde",
  "serde_json",
  "thiserror",
+ "zbus",
 ]
 
 [[package]]
