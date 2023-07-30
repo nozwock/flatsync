@@ -23,5 +23,11 @@
         "RUST_BACKTRACE": "1",
         "RUST_LOG": "trace",
         "CODEGEN_BUILD_DIR": "${workspaceFolder}/build/libflatsync-common/src"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer"
     }
 }
