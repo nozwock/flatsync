@@ -1,5 +1,3 @@
-build_targets = [ 'flatsync-cli', 'flatsync-daemon' ]
-
 cargo_options = [ '--manifest-path', meson.project_source_root() / 'Cargo.toml' ]
 cargo_options += [ '--target-dir', meson.project_build_root() / 'src' ]
 
@@ -24,19 +22,23 @@ base_command = [
     cargo_env,
     cargo, 'build',
 ]
-foreach i : build_targets
-  cargo_options_mut = cargo_options + [ '-p', i ]
-  cmd = base_command + cargo_options_mut +  ['&&', 'cp', join_paths('src', rust_target, i), '@OUTPUT@']
-
-  cargo_build = custom_target(
-    'cargo-build-' + i,
-    build_by_default: true,
-    build_always_stale: true,
-    output: i,
-    console: true,
-    install: true,
-    install_dir: bindir,
-    depends: resources,
-    command: cmd,
-  )
+build_targets = [ 'flatsync-cli', 'flatsync-daemon' ]
+cp_cmd = []
+foreach x : build_targets
+  cargo_options += [ '-p', x ]
+  cp_cmd +=  ['&&', 'cp', 'src' / rust_target / x, 'src' / x]
 endforeach
+
+cmd = base_command + cargo_options + cp_cmd
+
+cargo_build = custom_target(
+  'cargo-build',
+  build_by_default: true,
+  build_always_stale: true,
+  output: ['flatsync-daemon', 'flatsync-cli'],
+  console: true,
+  install: true,
+  install_dir: bindir,
+  depends: resources,
+  command: cmd,
+)
