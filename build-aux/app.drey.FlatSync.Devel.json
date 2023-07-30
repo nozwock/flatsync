@@ -168,20 +168,25 @@
             "name": "libyaml",
             "sources": [
                 {
-                    "type": "git",
-                    "url": "https://github.com/yaml/libyaml.git",
-                    "tag": "0.2.5"
+                    "type": "archive",
+                    "url": "https://github.com/yaml/libyaml/releases/download/0.2.5/yaml-0.2.5.tar.gz",
+                    "sha256": "c642ae9b75fee120b2d96c712538bd2cf283228d2337df2cf2988e3c02678ef4"
                 }
             ]
         },
         {
             "name": "libstemmer",
-            "buildsystem": "cmake-ninja",
+            "buildsystem": "simple",
+            "build-commands": [
+                "make",
+                "install -Dt /app/include -m644 include/libstemmer.h",
+                "install -Dm644 libstemmer.a /app/lib/libstemmer.a"
+            ],
             "sources": [
                 {
-                    "type": "git",
-                    "url": "https://github.com/zvelo/libstemmer",
-                    "commit": "78c149a3a6f262a35c7f7351d3f77b725fc646cf"
+                    "type": "archive",
+                    "url": "https://snowballstem.org/dist/libstemmer_c-2.2.0.tar.gz",
+                    "sha256": "b941d9fe9cf36b4e2f8d3873cd4d8b8775bd94867a1df8d8c001bb8b688377c3"
                 }
             ]
         },
@@ -196,9 +201,9 @@
             ],
             "sources": [
                 {
-                    "type": "git",
-                    "url": "https://github.com/hughsie/libxmlb.git",
-                    "tag": "0.3.9"
+                    "type": "archive",
+                    "url": "https://github.com/hughsie/libxmlb/releases/download/0.3.11/libxmlb-0.3.11.tar.xz",
+                    "sha256": "0bf704ca040b9ab371a62182d0d6417fe7ae38428e5f48846b87b99e74fe7c23"
                 }
             ]
         },
@@ -215,9 +220,9 @@
             "builddir": true,
             "sources": [
                 {
-                    "type": "git",
-                    "url": "https://github.com/ximion/appstream.git",
-                    "commit": "565ff2f3bcf4497c7ffbd298c95c24ad0b7c3d1e"
+                    "type": "archive",
+                    "url": "https://github.com/ximion/appstream/archive/refs/tags/v0.16.2.tar.gz",
+                    "sha256": "9a2ebe660704878ab795470a72cd53049408ddd9da6e9cb45232cf0ed6505660"
                 }
             ]
         },
@@ -246,9 +251,9 @@
             ],
             "sources": [
                 {
-                    "type": "git",
-                    "url": "https://github.com/flatpak/flatpak.git",
-                    "branch": "1.14.4"
+                    "type": "archive",
+                    "url": "https://github.com/flatpak/flatpak/releases/download/1.14.4/flatpak-1.14.4.tar.xz",
+                    "sha256": "8a34dbd0b67c434e7598b98ec690953d046f0db26e480aeafb46d72aec716799"
                 },
                 {
                     "type": "file",
