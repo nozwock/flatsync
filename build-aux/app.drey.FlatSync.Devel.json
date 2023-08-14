@@ -40,10 +40,7 @@
             "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER": "clang",
             "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS": "-C link-arg=-fuse-ld=/usr/lib/sdk/rust-stable/bin/mold",
             "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER": "clang",
-            "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS": "-C link-arg=-fuse-ld=/usr/lib/sdk/rust-stable/bin/mold",
-            "RUSTC_WRAPPER": "/app/bin/sccache",
-            "SCCACHE_DIR": "/run/ccache/sccache",
-            "SCCACHE_IDLE_TIMEOUT": "10"
+            "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS": "-C link-arg=-fuse-ld=/usr/lib/sdk/rust-stable/bin/mold"
         },
         "test-args": [
             "--socket=x11",
@@ -258,34 +255,6 @@
                 {
                     "type": "file",
                     "path": "flatpak-bwrap-wrapper.sh"
-                }
-            ]
-        },
-        {
-            "name": "sccache",
-            "buildsystem": "simple",
-            "build-commands": [
-                "install -Dma+rwx sccache /app/bin/sccache"
-            ],
-            "cleanup": [
-                "/bin/sccache"
-            ],
-            "sources": [
-                {
-                    "type": "archive",
-                    "url": "https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-x86_64-unknown-linux-musl.tar.gz",
-                    "sha256": "4bf3ce366aa02599019093584a5cbad4df783f8d6e3610548c2044daa595d40b",
-                    "only-arches": [
-                        "x86_64"
-                    ]
-                },
-                {
-                    "type": "archive",
-                    "url": "https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-aarch64-unknown-linux-musl.tar.gz",
-                    "sha256": "85f0cfe9b3150e461801cf7453763080fc3604e255587e2a4886e55bb93e6b09",
-                    "only-arches": [
-                        "aarch64"
-                    ]
                 }
             ]
         },
