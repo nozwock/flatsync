@@ -8,10 +8,16 @@ pub enum Error {
     FlatpakInstallationFileFailure(String),
     #[error("Error while installating Flatpak reference '{0}': {1}")]
     FlatpakInstallationFailed(String, String),
+    #[error("Error while uninstalling Flatpak reference '{0}': {1}")]
+    FlatpakUninstallationFailed(String, String),
     #[error("Error while adding Flatpak remote '{0}': {1}")]
     FlatpakRemoteAddFailed(String, String),
     #[error("Error while refreshing Flatpak remote '{0}': {1}")]
     FlatpakRemoteRefreshFailed(String, String),
+    #[error("Flatpak is already installed")]
+    FlatpakAlreadyInstalled,
+    #[error("Transaction failed: {0}")]
+    FlatpakTransactionFailure(String),
     #[error("FlatSync gist is already initialized with ID: {0}")]
     GistAlreadyInitialized(String),
     #[error("Gist uninitialized yet no gist ID was provided when attempting to sync")]

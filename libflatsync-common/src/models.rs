@@ -1,6 +1,11 @@
 use chrono::{DateTime, Utc};
 use diff::Diff;
-use std::{collections::BTreeMap, fmt, path::PathBuf};
+use log::trace;
+use std::{
+    collections::BTreeMap,
+    fmt,
+    path::{Path, PathBuf},
+};
 
 use libflatpak::{
     gio::{self, traits::FileExt},
@@ -9,8 +14,10 @@ use libflatpak::{
     Installation,
 };
 
+use crate::Error;
+
 #[derive(
-    Debug, Default, Clone, Copy, PartialEq, Eq, Diff, serde::Serialize, serde::Deserialize,
+    Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Diff, serde::Serialize, serde::Deserialize,
 )]
 #[diff(attr(#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]))]
 pub enum FlatpakRefKind {
@@ -29,7 +36,9 @@ impl From<libflatpak::RefKind> for FlatpakRefKind {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Diff, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, Hash, Diff, serde::Serialize, serde::Deserialize,
+)]
 #[diff(attr(#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]))]
 pub struct FlatpakRef {
     pub kind: FlatpakRefKind,
@@ -295,7 +304,7 @@ pub struct FlatpakInstallationPayload {
 }
 
 impl FlatpakInstallationPayload {
-    pub fn new() -> Result<FlatpakInstallationPayload, crate::Error> {
+    pub fn new_from_system() -> Result<FlatpakInstallationPayload, Error> {
         let installations = FlatpakInstallationMap::available_installations()?;
         let altered_at = Utc::now();
 
@@ -303,6 +312,49 @@ impl FlatpakInstallationPayload {
             installations,
             altered_at,
         })
+    }
+
+    /// ## `installations_from_file()`
+    /// Reads the local installations file and returns a `FlatpakInstallationPayload` from it.
+    /// Returns an `Error` if the file doesn't exist or if it fails to read it.
+    ///
+    /// * `file_path` - The path to the local installations file.
+    pub fn new_from_file<P: AsRef<Path>>(file_path: P) -> Result<Self, Error> {
+        let path = file_path.as_ref();
+        if !path.exists() {
+            return Err(Error::FlatpakInstallationFileFailure(
+                "File doesn't exist".into(),
+            ));
+        }
+
+        let file = std::fs::File::open(path)?;
+        let reader = std::io::BufReader::new(file);
+        let file_payload: FlatpakInstallationPayload = serde_json::from_reader(reader)
+            .map_err(|e| Error::FlatpakInstallationFileFailure(e.to_string()))?;
+
+        trace!("Read from file '{:?}': {:?}", path, file_payload);
+
+        Ok(file_payload)
+    }
+
+    pub fn write_to_file<P: AsRef<Path>>(&self, file_path: &P) -> Result<(), Error> {
+        let serialized = serde_json::to_string(self).map_err(|e| {
+            Error::FlatpakInstallationFileFailure(format!(
+                "Failed to serialize local payload: {}",
+                e
+            ))
+        })?;
+
+        trace!(
+            "Writing to file '{:?}': {:?}",
+            file_path.as_ref(),
+            serialized
+        );
+
+        std::fs::write(file_path, serialized)
+            .map_err(|e| Error::FlatpakInstallationFileFailure(e.to_string()))?;
+
+        Ok(())
     }
 
     pub fn installations(&self, kind: FlatpakInstallationKind) -> Option<&FlatpakInstallation> {
