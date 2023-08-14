@@ -6,4 +6,8 @@ pub enum Error {
     FlatpakInstallationQueryFailure(glib::Error),
     #[error("Got invalid Flatpak installation kind: {0}")]
     InvalidFlatpakInstallationKind(String),
+    #[error("Error while interacting with local Flatpak installation file: {0}")]
+    FlatpakInstallationFileFailure(String),
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
 }

@@ -27,8 +27,8 @@ impl Impl {
     }
 
     pub async fn post_gist(&self) -> Result<(), Error> {
-        let payload =
-            FlatpakInstallationPayload::new().map_err(Error::FlatpakInstallationQueryFailure)?;
+        let payload = FlatpakInstallationPayload::new_from_system()
+            .map_err(Error::FlatpakInstallationQueryFailure)?;
         if !self.client.is_initialised() {
             return Err(Error::GistIdMissing);
         }
@@ -42,8 +42,8 @@ impl Impl {
             return Err(Error::GistAlreadyInitialized(self.client.sink_id()));
         }
 
-        let payload =
-            FlatpakInstallationPayload::new().map_err(Error::FlatpakInstallationQueryFailure)?;
+        let payload = FlatpakInstallationPayload::new_from_system()
+            .map_err(Error::FlatpakInstallationQueryFailure)?;
         self.client.create(payload).await?;
         Ok(self.client.sink_id())
     }
