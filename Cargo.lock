@@ -655,6 +655,7 @@ dependencies = [
  "log",
  "once_cell",
  "pretty_env_logger",
+ "tokio",
  "zbus",
 ]
 

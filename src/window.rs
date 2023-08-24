@@ -1,14 +1,20 @@
 use crate::application::FlatsyncApplication;
 use adw::prelude::*;
+use gtk::glib::MainContext;
 use gtk::subclass::prelude::*;
 use gtk::{
     gio,
     glib::{self, clone},
 };
 use libflatsync_common::config::{APP_ID, PROFILE};
+use libflatsync_common::dbus::DaemonProxy;
+use log::error;
+use tokio::runtime::Runtime;
 
 mod imp {
     use super::*;
+    use libflatsync_common::dbus::DaemonProxy;
+    use std::cell::OnceCell;
 
     #[derive(Debug, gtk::CompositeTemplate)]
     #[template(resource = "/app/drey/FlatSync/ui/window.ui")]
@@ -20,6 +26,8 @@ mod imp {
         #[template_child]
         pub github_id_entry: TemplateChild<adw::EntryRow>,
         pub settings: gio::Settings,
+        pub proxy: OnceCell<DaemonProxy<'static>>,
+        pub tokio_runtime: OnceCell<Runtime>,
     }
 
     impl Default for FlatsyncApplicationWindow {
@@ -29,6 +37,8 @@ mod imp {
                 github_token_entry: TemplateChild::default(),
                 github_id_entry: TemplateChild::default(),
                 settings: gio::Settings::new(APP_ID),
+                proxy: OnceCell::new(),
+                tokio_runtime: OnceCell::new(),
             }
         }
     }
@@ -53,11 +63,26 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
             let obj = self.obj();
+            self.tokio_runtime.set(Runtime::new().unwrap()).unwrap();
 
             // Devel Profile
             if PROFILE == "Devel" {
                 obj.add_css_class("devel");
             }
+
+            // Init zbus proxy
+            let (sender, mut reciever) = tokio::sync::mpsc::channel::<DaemonProxy>(1);
+
+            self.tokio_runtime.get().unwrap().spawn(async move {
+                let connection = zbus::Connection::session().await.unwrap();
+                let proxy = libflatsync_common::dbus::DaemonProxy::new(&connection)
+                    .await
+                    .unwrap();
+
+                sender.send(proxy).await.unwrap();
+            });
+
+            self.proxy.set(reciever.blocking_recv().unwrap()).unwrap();
 
             // Load latest window state
             obj.load_window_size();
@@ -106,6 +131,10 @@ impl FlatsyncApplicationWindow {
         Ok(())
     }
 
+    fn proxy(&self) -> &DaemonProxy<'static> {
+        self.imp().proxy.get().unwrap()
+    }
+
     fn load_window_size(&self) {
         let imp = self.imp();
 
@@ -124,13 +153,23 @@ impl FlatsyncApplicationWindow {
         let imp = self.imp();
         imp.github_id_entry
             .connect_apply(clone!(@weak self as obj => move |entry| {
+                let ctx = MainContext::default();
                 let text = entry.text();
-                obj.imp().settings.set_string("github-id", text.as_str()).unwrap();
+                ctx.spawn_local(clone!(@weak obj => async move {
+                    if let Err(e) = obj.proxy().set_gist_id(text.as_str()).await {
+                        error!("{e}");
+                    }
+                }));
             }));
         imp.github_token_entry
             .connect_apply(clone!(@weak self as obj => move |entry| {
+                let ctx = MainContext::default();
                 let text = entry.text();
-                obj.imp().settings.set_string("github-token", text.as_str()).unwrap();
+                ctx.spawn_local(clone!(@weak obj => async move {
+                    if let Err(e) = obj.proxy().set_gist_secret(text.as_str()).await {
+                        error!("{e}");
+                    }
+                }));
             }));
     }
 }
