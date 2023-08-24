@@ -678,6 +678,7 @@ dependencies = [
  "chrono",
  "delegate",
  "diff-struct",
+ "gio",
  "glib",
  "libflatpak",
  "libflatsync-common",

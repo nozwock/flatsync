@@ -13,6 +13,7 @@ chrono = { version = "0.4", features = ["serde"] }
 delegate = "0.10.0"
 diff-struct = "0.5"
 glib = "0.17"
+gio = "0.17"
 libflatpak = { version = "0.3.0", features = ["v1_13_3"] }
 libflatsync-common = { path = "../libflatsync-common" }
 log = "0.4"

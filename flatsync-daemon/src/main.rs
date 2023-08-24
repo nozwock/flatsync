@@ -1,3 +1,4 @@
+use gio::prelude::NetworkMonitorExt;
 use libflatpak::gio::prelude::*;
 use libflatpak::prelude::*;
 use log::{debug, error, info, warn};
@@ -18,6 +19,10 @@ enum MessageType {
 }
 
 async fn poll_remote(ctx: &mut context::Context, imp: &imp::Impl) -> Result<(), Error> {
+    if gio::NetworkMonitor::default().is_network_metered() {
+        debug!("Network is metered, skipping remote poll...");
+        return Ok(());
+    }
     let res = imp.fetch_gist().await;
     match res {
         Ok(Some(remote)) => {
