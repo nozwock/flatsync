@@ -22,7 +22,7 @@ mod imp {
         #[template_child]
         pub headerbar: TemplateChild<gtk::HeaderBar>,
         #[template_child]
-        pub github_token_entry: TemplateChild<adw::EntryRow>,
+        pub github_token_entry: TemplateChild<adw::PasswordEntryRow>,
         #[template_child]
         pub github_id_entry: TemplateChild<adw::EntryRow>,
         pub settings: gio::Settings,
@@ -69,6 +69,9 @@ mod imp {
             if PROFILE == "Devel" {
                 obj.add_css_class("devel");
             }
+
+            // Load initial settings
+            obj.setup_settings_values();
 
             // Init zbus proxy
             let (sender, mut reciever) = tokio::sync::mpsc::channel::<DaemonProxy>(1);
@@ -171,5 +174,14 @@ impl FlatsyncApplicationWindow {
                     }
                 }));
             }));
+    }
+
+    fn setup_settings_values(&self) {
+        let imp = self.imp();
+
+        imp.github_id_entry
+            .set_text(&imp.settings.get::<String>("github-gists-id"));
+
+        imp.github_token_entry.set_text("1234");
     }
 }
