@@ -1,7 +1,7 @@
+use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{
     prelude::*,
-    subclass::prelude::*,
     {gdk, gio, glib},
 };
 use libflatsync_common::config::{APP_ID, PKGDATADIR, PROFILE, VERSION};
@@ -23,7 +23,7 @@ mod imp {
     impl ObjectSubclass for FlatsyncApplication {
         const NAME: &'static str = "FlatsyncApplication";
         type Type = super::FlatsyncApplication;
-        type ParentType = gtk::Application;
+        type ParentType = adw::Application;
     }
 
     impl ObjectImpl for FlatsyncApplication {}
@@ -63,11 +63,12 @@ mod imp {
     }
 
     impl GtkApplicationImpl for FlatsyncApplication {}
+    impl AdwApplicationImpl for FlatsyncApplication {}
 }
 
 glib::wrapper! {
     pub struct FlatsyncApplication(ObjectSubclass<imp::FlatsyncApplication>)
-        @extends gio::Application, gtk::Application,
+        @extends gio::Application, gtk::Application, adw::Application,
         @implements gio::ActionMap, gio::ActionGroup;
 }
 

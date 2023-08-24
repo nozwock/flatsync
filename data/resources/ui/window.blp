@@ -1,4 +1,5 @@
 using Gtk 4.0;
+using Adw 1;
 
 menu primary_menu {
   section {
@@ -19,7 +20,7 @@ menu primary_menu {
   }
 }
 
-template $ExampleApplicationWindow : ApplicationWindow {
+template $FlatsyncApplicationWindow : ApplicationWindow {
   [titlebar]
   HeaderBar headerbar {
     [end]
@@ -29,11 +30,19 @@ template $ExampleApplicationWindow : ApplicationWindow {
     }
   }
 
-  Label label {
-    label: _("Hello world!");
+  Adw.PreferencesPage page {
+    Adw.PreferencesGroup {
+      title: "GitHub Gists Settings";
 
-    styles [
-      "title-header",
-    ]
+      Adw.EntryRow github_token_entry {
+        show-apply-button: true;
+        title: "GitHub Token";
+      }
+
+      Adw.EntryRow github_id_entry {
+        show-apply-button: true;
+        title: "Gists ID (leave empty if this is the first machine using flatsync)";
+      }
+    }
   }
 }

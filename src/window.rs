@@ -1,7 +1,10 @@
 use crate::application::FlatsyncApplication;
-use gtk::prelude::*;
+use adw::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{gio, glib};
+use gtk::{
+    gio,
+    glib::{self, clone},
+};
 use libflatsync_common::config::{APP_ID, PROFILE};
 
 mod imp {
@@ -12,6 +15,10 @@ mod imp {
     pub struct FlatsyncApplicationWindow {
         #[template_child]
         pub headerbar: TemplateChild<gtk::HeaderBar>,
+        #[template_child]
+        pub github_token_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub github_id_entry: TemplateChild<adw::EntryRow>,
         pub settings: gio::Settings,
     }
 
@@ -19,6 +26,8 @@ mod imp {
         fn default() -> Self {
             Self {
                 headerbar: TemplateChild::default(),
+                github_token_entry: TemplateChild::default(),
+                github_id_entry: TemplateChild::default(),
                 settings: gio::Settings::new(APP_ID),
             }
         }
@@ -52,6 +61,7 @@ mod imp {
 
             // Load latest window state
             obj.load_window_size();
+            obj.connect_handlers();
         }
     }
 
@@ -108,5 +118,19 @@ impl FlatsyncApplicationWindow {
         if is_maximized {
             self.maximize();
         }
+    }
+
+    fn connect_handlers(&self) {
+        let imp = self.imp();
+        imp.github_id_entry
+            .connect_apply(clone!(@weak self as obj => move |entry| {
+                let text = entry.text();
+                obj.imp().settings.set_string("github-id", text.as_str()).unwrap();
+            }));
+        imp.github_token_entry
+            .connect_apply(clone!(@weak self as obj => move |entry| {
+                let text = entry.text();
+                obj.imp().settings.set_string("github-token", text.as_str()).unwrap();
+            }));
     }
 }
