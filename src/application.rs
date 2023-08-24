@@ -7,7 +7,7 @@ use gtk::{
 use libflatsync_common::config::{APP_ID, PKGDATADIR, PROFILE, VERSION};
 use log::{debug, info};
 
-use crate::window::ExampleApplicationWindow;
+use crate::window::FlatsyncApplicationWindow;
 
 mod imp {
     use super::*;
@@ -15,22 +15,22 @@ mod imp {
     use once_cell::sync::OnceCell;
 
     #[derive(Debug, Default)]
-    pub struct ExampleApplication {
-        pub window: OnceCell<WeakRef<ExampleApplicationWindow>>,
+    pub struct FlatsyncApplication {
+        pub window: OnceCell<WeakRef<FlatsyncApplicationWindow>>,
     }
 
     #[glib::object_subclass]
-    impl ObjectSubclass for ExampleApplication {
-        const NAME: &'static str = "ExampleApplication";
-        type Type = super::ExampleApplication;
+    impl ObjectSubclass for FlatsyncApplication {
+        const NAME: &'static str = "FlatsyncApplication";
+        type Type = super::FlatsyncApplication;
         type ParentType = gtk::Application;
     }
 
-    impl ObjectImpl for ExampleApplication {}
+    impl ObjectImpl for FlatsyncApplication {}
 
-    impl ApplicationImpl for ExampleApplication {
+    impl ApplicationImpl for FlatsyncApplication {
         fn activate(&self) {
-            debug!("GtkApplication<ExampleApplication>::activate");
+            debug!("GtkApplication<FlatsyncApplication>::activate");
             self.parent_activate();
             let app = self.obj();
 
@@ -40,7 +40,7 @@ mod imp {
                 return;
             }
 
-            let window = ExampleApplicationWindow::new(&app);
+            let window = FlatsyncApplicationWindow::new(&app);
             self.window
                 .set(window.downgrade())
                 .expect("Window already set.");
@@ -49,7 +49,7 @@ mod imp {
         }
 
         fn startup(&self) {
-            debug!("GtkApplication<ExampleApplication>::startup");
+            debug!("GtkApplication<FlatsyncApplication>::startup");
             self.parent_startup();
             let app = self.obj();
 
@@ -62,17 +62,17 @@ mod imp {
         }
     }
 
-    impl GtkApplicationImpl for ExampleApplication {}
+    impl GtkApplicationImpl for FlatsyncApplication {}
 }
 
 glib::wrapper! {
-    pub struct ExampleApplication(ObjectSubclass<imp::ExampleApplication>)
+    pub struct FlatsyncApplication(ObjectSubclass<imp::FlatsyncApplication>)
         @extends gio::Application, gtk::Application,
         @implements gio::ActionMap, gio::ActionGroup;
 }
 
-impl ExampleApplication {
-    fn main_window(&self) -> ExampleApplicationWindow {
+impl FlatsyncApplication {
+    fn main_window(&self) -> FlatsyncApplicationWindow {
         self.imp().window.get().unwrap().upgrade().unwrap()
     }
 
@@ -140,7 +140,7 @@ impl ExampleApplication {
     }
 }
 
-impl Default for ExampleApplication {
+impl Default for FlatsyncApplication {
     fn default() -> Self {
         glib::Object::builder()
             .property("application-id", APP_ID)

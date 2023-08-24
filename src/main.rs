@@ -1,7 +1,7 @@
 mod application;
 mod window;
 
-use self::application::ExampleApplication;
+use self::application::FlatsyncApplication;
 use gettextrs::{gettext, LocaleCategory};
 use gtk::{gio, glib};
 use libflatsync_common::config::{GETTEXT_PACKAGE, LOCALEDIR, RESOURCES_FILE};
@@ -20,6 +20,6 @@ fn main() -> glib::ExitCode {
     let res = gio::Resource::load(RESOURCES_FILE).expect("Could not load gresource file");
     gio::resources_register(&res);
 
-    let app = ExampleApplication::default();
+    let app = FlatsyncApplication::default();
     app.run()
 }

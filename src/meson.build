@@ -22,7 +22,7 @@ base_command = [
     cargo_env,
     cargo, 'build',
 ]
-build_targets = [ 'flatsync-cli', 'flatsync-daemon' ]
+build_targets = [ 'flatsync-cli', 'flatsync-daemon', 'flatsync' ]
 cp_cmd = []
 foreach x : build_targets
   cargo_options += [ '-p', x ]
@@ -35,7 +35,7 @@ cargo_build = custom_target(
   'cargo-build',
   build_by_default: true,
   build_always_stale: true,
-  output: ['flatsync-daemon', 'flatsync-cli'],
+  output: build_targets,
   console: true,
   install: true,
   install_dir: bindir,

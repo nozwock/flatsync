@@ -1,4 +1,4 @@
-use crate::application::ExampleApplication;
+use crate::application::FlatsyncApplication;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib};
@@ -9,13 +9,13 @@ mod imp {
 
     #[derive(Debug, gtk::CompositeTemplate)]
     #[template(resource = "/app/drey/FlatSync/ui/window.ui")]
-    pub struct ExampleApplicationWindow {
+    pub struct FlatsyncApplicationWindow {
         #[template_child]
         pub headerbar: TemplateChild<gtk::HeaderBar>,
         pub settings: gio::Settings,
     }
 
-    impl Default for ExampleApplicationWindow {
+    impl Default for FlatsyncApplicationWindow {
         fn default() -> Self {
             Self {
                 headerbar: TemplateChild::default(),
@@ -25,9 +25,9 @@ mod imp {
     }
 
     #[glib::object_subclass]
-    impl ObjectSubclass for ExampleApplicationWindow {
-        const NAME: &'static str = "ExampleApplicationWindow";
-        type Type = super::ExampleApplicationWindow;
+    impl ObjectSubclass for FlatsyncApplicationWindow {
+        const NAME: &'static str = "FlatsyncApplicationWindow";
+        type Type = super::FlatsyncApplicationWindow;
         type ParentType = gtk::ApplicationWindow;
 
         fn class_init(klass: &mut Self::Class) {
@@ -40,7 +40,7 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for ExampleApplicationWindow {
+    impl ObjectImpl for FlatsyncApplicationWindow {
         fn constructed(&self) {
             self.parent_constructed();
             let obj = self.obj();
@@ -55,8 +55,8 @@ mod imp {
         }
     }
 
-    impl WidgetImpl for ExampleApplicationWindow {}
-    impl WindowImpl for ExampleApplicationWindow {
+    impl WidgetImpl for FlatsyncApplicationWindow {}
+    impl WindowImpl for FlatsyncApplicationWindow {
         // Save window state on delete event
         fn close_request(&self) -> gtk::Inhibit {
             if let Err(err) = self.obj().save_window_size() {
@@ -68,17 +68,17 @@ mod imp {
         }
     }
 
-    impl ApplicationWindowImpl for ExampleApplicationWindow {}
+    impl ApplicationWindowImpl for FlatsyncApplicationWindow {}
 }
 
 glib::wrapper! {
-    pub struct ExampleApplicationWindow(ObjectSubclass<imp::ExampleApplicationWindow>)
+    pub struct FlatsyncApplicationWindow(ObjectSubclass<imp::FlatsyncApplicationWindow>)
         @extends gtk::Widget, gtk::Window, gtk::ApplicationWindow,
         @implements gio::ActionMap, gio::ActionGroup, gtk::Root;
 }
 
-impl ExampleApplicationWindow {
-    pub fn new(app: &ExampleApplication) -> Self {
+impl FlatsyncApplicationWindow {
+    pub fn new(app: &FlatsyncApplication) -> Self {
         glib::Object::builder().property("application", app).build()
     }
 
