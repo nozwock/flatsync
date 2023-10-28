@@ -1,6 +1,7 @@
 use self::client::GitHubClient;
 use async_trait::async_trait;
 use libflatsync_common::FlatpakInstallationPayload;
+use log::debug;
 use serde_json::json;
 use zbus::zvariant::Type;
 
@@ -14,8 +15,20 @@ use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-mod client {
+static GH_SINK_NAME: &str = "github-gists";
+static GH_API_URL: &str = "https://api.github.com/gists";
+
+pub mod client {
+    use crate::data_sinks::data_sink_client::DataSinkClient;
+    use crate::data_sinks::data_sink_client::SecretType;
+    use crate::data_sinks::oauth_client::OauthClient;
     use crate::data_sinks::rest_client::RestClient;
+    use crate::Error;
+    use libflatsync_common::providers::github::get_github_basic_client;
+    use libflatsync_common::providers::oauth_client::{AccessTokenData, TokenPair};
+    use oauth2::basic::BasicClient;
+    use oauth2::reqwest::http_client;
+    use oauth2::TokenResponse;
     // '{"description":"Example of a gist","public":false,"files":{"README.md":{"content":"Hello World"}}}'
     use reqwest::{IntoUrl, Method, RequestBuilder};
 
@@ -23,26 +36,86 @@ mod client {
 
     pub struct GitHubClient {
         request: RequestBuilder,
+        client: BasicClient,
+    }
+
+    impl DataSinkClient for GitHubClient {
+        fn sink_name(&self) -> &'static str {
+            super::GH_SINK_NAME
+        }
     }
 
     impl GitHubClient {
-        pub fn new<U: IntoUrl>(method: Method, url: U) -> GitHubClient {
-            GitHubClient {
+        pub async fn new<U: IntoUrl>(method: Method, url: U) -> Result<GitHubClient, Error> {
+            Ok(GitHubClient {
                 request: reqwest::Client::builder()
                     .user_agent(APP_USER_AGENT)
                     .build()
                     .unwrap()
                     .request(method, url),
-            }
+                client: get_github_basic_client(),
+            })
         }
 
-        pub async fn send(self, github_token: &str) -> Result<reqwest::Response, reqwest::Error> {
+        async fn secret(&self) -> Result<SecretType, Error> {
+            let token_pair = serde_json::from_str::<TokenPair>(&self.secret_raw().await?).unwrap();
+
+            Ok(SecretType::OAuth(token_pair))
+        }
+
+        pub async fn send(self) -> Result<reqwest::Response, Error> {
+            let SecretType::OAuth(token_pair) = self.secret().await? else {
+                unreachable!();
+            };
+
+            self.check_tokens(&token_pair).unwrap();
+
             self.request
                 .header("Accept", "application/vnd.github+json")
-                .header("Authorization", format!("Bearer {}", github_token))
+                .header(
+                    "Authorization",
+                    format!("Bearer {}", token_pair.access_token_data.token.secret()),
+                )
                 .header("X-GitHub-Api-Version", "2022-11-28")
                 .send()
                 .await
+                .map_err(Error::HttpFailure)
+        }
+    }
+
+    impl OauthClient for GitHubClient {
+        fn oauth2_scopes(&self) -> Vec<String> {
+            vec![]
+        }
+
+        fn check_tokens(&self, tokens: &TokenPair) -> Result<TokenPair, Error> {
+            let token_data = &tokens.access_token_data;
+
+            if token_data.expires_in.is_none() {
+                return Ok(tokens.clone());
+            }
+
+            if token_data.expires_in.unwrap() > chrono::Utc::now() {
+                return Ok(tokens.clone());
+            }
+
+            let token = self
+                .client
+                .exchange_refresh_token(&tokens.refresh_token.clone().unwrap())
+                .request(http_client)
+                .unwrap();
+
+            let token_data = AccessTokenData {
+                token: token.access_token().clone(),
+                expires_in: token
+                    .expires_in()
+                    .map(|e| chrono::Utc::now() + chrono::Duration::seconds(e.as_secs() as i64)),
+            };
+
+            Ok(TokenPair {
+                access_token_data: token_data,
+                refresh_token: Some(token.refresh_token().unwrap().clone()),
+            })
         }
     }
 
@@ -88,26 +161,23 @@ mod models {
     }
 }
 
-pub struct GitHubGistDataSink {
-    keyring: oo7::Keyring,
-}
+pub struct GitHubGistDataSink {}
 
 impl GitHubGistDataSink {
     pub async fn new() -> Result<Self, Error> {
-        let keyring = oo7::Keyring::new().await?;
-        Ok(Self { keyring })
+        Ok(Self {})
     }
 }
 
 #[async_trait]
 impl DataSink for GitHubGistDataSink {
     async fn create(&self, payload: FlatpakInstallationPayload) -> Result<(), Error> {
-        #[derive(Serialize, Deserialize, Type)]
+        #[derive(Serialize, Deserialize, Type, Debug)]
         pub struct CreateGistResponse {
             pub id: String,
         }
 
-        let mut client = GitHubClient::new(Method::POST, "https://api.github.com/gists");
+        let mut client = GitHubClient::new(Method::POST, GH_API_URL).await?;
 
         client.body(json!({
             "description": "Installed Flatpaks and its remote repositories",
@@ -117,8 +187,11 @@ impl DataSink for GitHubGistDataSink {
             },
         }));
 
-        let resp: CreateGistResponse = client.send(&self.secret().await?).await?.json().await?;
-        self.set_sink_id(&resp.id);
+        let resp = client.send().await?;
+        debug!("Gist creation response: {:?}", resp);
+        let data: CreateGistResponse = resp.json().await?;
+        debug!("Gist creation response data: {:?}", data);
+        self.set_sink_id(&data.id);
         Ok(())
     }
 
@@ -129,14 +202,13 @@ impl DataSink for GitHubGistDataSink {
             files: BTreeMap<String, GistFile>,
         }
 
-        let mut resp: GetGistResponse = GitHubClient::new(
-            Method::GET,
-            &format!("https://api.github.com/gists/{}", self.sink_id()),
-        )
-        .send(&self.secret().await?)
-        .await?
-        .json()
-        .await?;
+        let mut resp: GetGistResponse =
+            GitHubClient::new(Method::GET, format!("{}/{}", GH_API_URL, self.sink_id()))
+                .await?
+                .send()
+                .await?
+                .json()
+                .await?;
 
         Ok(resp
             .files
@@ -146,25 +218,19 @@ impl DataSink for GitHubGistDataSink {
     }
 
     async fn update(&self, payload: FlatpakInstallationPayload) -> Result<(), Error> {
-        let mut client = GitHubClient::new(
-            Method::POST,
-            format!("https://api.github.com/gists/{}", self.sink_id()),
-        );
+        let mut client =
+            GitHubClient::new(Method::POST, format!("{}/{}", GH_API_URL, self.sink_id())).await?;
         client.body(json!({
             "files": {
                 FILE_NAME: GistFile { content: payload }
             },
         }));
-        client.send(&self.secret().await?).await?;
+        client.send().await?;
 
         Ok(())
     }
 
     fn sink_name(&self) -> &'static str {
-        "github-gists"
-    }
-
-    fn keyring(&self) -> &oo7::Keyring {
-        &self.keyring
+        GH_SINK_NAME
     }
 }

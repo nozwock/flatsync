@@ -4,53 +4,57 @@ use crate::{
 };
 use ashpd::desktop::background::Background;
 use libflatsync_common::{config, FlatpakInstallationPayload};
+use log::{info, trace};
 use std::path::Path;
 use tokio::fs;
 
 pub struct Impl {
-    client: Box<dyn DataSink + 'static + Send + Sync>,
+    sink: Box<dyn DataSink + 'static + Send + Sync>,
 }
 
 impl Impl {
     pub async fn new() -> Result<Self, Error> {
         Ok(Self {
-            client: Box::new(GitHubGistDataSink::new().await?),
+            sink: Box::new(GitHubGistDataSink::new().await?),
         })
     }
 
     pub async fn set_gist_secret(&self, secret: &str) -> Result<(), Error> {
-        self.client.set_secret(secret).await
+        self.sink.set_secret(secret).await
     }
 
     pub fn set_gist_id(&self, id: &str) {
-        self.client.set_sink_id(id);
+        self.sink.set_sink_id(id);
     }
 
     pub async fn post_gist(&self) -> Result<(), Error> {
         let payload = FlatpakInstallationPayload::new_from_system()
             .map_err(Error::FlatpakInstallationQueryFailure)?;
-        if !self.client.is_initialised() {
+        if !self.sink.is_initialised() {
             return Err(Error::GistIdMissing);
         }
 
-        self.client.update(payload).await?;
+        self.sink.update(payload).await?;
         Ok(())
     }
 
     pub async fn create_gist(&self) -> Result<String, Error> {
-        if self.client.is_initialised() {
-            return Err(Error::GistAlreadyInitialized(self.client.sink_id()));
+        if self.sink.is_initialised() {
+            return Err(Error::GistAlreadyInitialized(self.sink.sink_id()));
         }
 
+        info!("Creating new gist...");
         let payload = FlatpakInstallationPayload::new_from_system()
             .map_err(Error::FlatpakInstallationQueryFailure)?;
-        self.client.create(payload).await?;
-        Ok(self.client.sink_id())
+        trace!("Current gist payload: {:?}", payload);
+        self.sink.create(payload).await?;
+        info!("Done creating new gist.");
+        Ok(self.sink.sink_id())
     }
 
     pub async fn fetch_gist(&self) -> Result<Option<FlatpakInstallationPayload>, Error> {
-        let val = if self.client.is_initialised() {
-            Some(self.client.fetch().await?)
+        let val = if self.sink.is_initialised() {
+            Some(self.sink.fetch().await?)
         } else {
             None
         };

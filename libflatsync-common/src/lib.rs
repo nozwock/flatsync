@@ -11,4 +11,5 @@ pub use error::Error;
 
 pub mod dbus;
 pub mod models;
+pub mod providers;
 pub use models::*;
