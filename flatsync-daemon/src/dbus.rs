@@ -1,5 +1,5 @@
 use crate::{imp::Impl, DBusError};
-use log::info;
+use log::{debug, info};
 use zbus::dbus_interface;
 
 pub struct Daemon {
@@ -28,10 +28,10 @@ impl Daemon {
     /// ## `CreateGist(...)`
     /// Create a remote gist with the list of local Flatpak installations and get the gist file ID
     async fn create_gist(&mut self) -> Result<String, DBusError> {
-        self.imp
-            .create_gist()
-            .await
-            .map_err(|e| DBusError::GistCreateFailure(e.to_string()))
+        self.imp.create_gist().await.map_err(|e| {
+            debug!("Error creating gist: {:?}", e);
+            DBusError::GistCreateFailure(e.to_string())
+        })
     }
 
     /// ## `UpdateGist(..)`

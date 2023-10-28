@@ -10,4 +10,6 @@ pub enum Error {
     FlatpakInstallationFileFailure(String),
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("Error while dealing with reqwest and OAuth2: {0}")]
+    OAuth2ReqwestFailure(String),
 }
