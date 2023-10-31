@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use log::{debug, error};
+use log::error;
 use oauth2::{
     basic::BasicClient, http, reqwest::async_http_client, AuthUrl, ClientId,
     DeviceAuthorizationUrl, HttpRequest, HttpResponse, StandardDeviceAuthorizationResponse,
@@ -14,6 +14,9 @@ static GH_CLIENT_ID: &str = "Iv1.1bf99f29c6b7d129";
 static GH_AUTH_URL: &str = "https://github.com/login/oauth/authorize";
 static GH_DEVICE_AUTH_URL: &str = "https://github.com/login/device/code";
 static GH_TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
+
+// Specific to the behavior of GitHub Apps. We need the "Repository Metadata" permission to interact with the Gist API, and we only get that by installing the app the the user's account
+pub static GH_APP_INSTALLATION_URL: &str = "https://github.com/apps/flatsync/installations/new";
 
 async fn custom_async_http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
     let orig_res = async_http_client(request).await;
