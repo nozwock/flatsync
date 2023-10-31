@@ -24,10 +24,11 @@ pub mod client {
     use crate::data_sinks::oauth_client::OauthClient;
     use crate::data_sinks::rest_client::RestClient;
     use crate::Error;
+    use async_trait::async_trait;
     use libflatsync_common::providers::github::get_github_basic_client;
     use libflatsync_common::providers::oauth_client::{AccessTokenData, TokenPair};
     use oauth2::basic::BasicClient;
-    use oauth2::reqwest::http_client;
+    use oauth2::reqwest::async_http_client;
     use oauth2::TokenResponse;
     // '{"description":"Example of a gist","public":false,"files":{"README.md":{"content":"Hello World"}}}'
     use reqwest::{IntoUrl, Method, RequestBuilder};
@@ -68,7 +69,7 @@ pub mod client {
                 unreachable!();
             };
 
-            self.check_tokens(&token_pair).unwrap();
+            self.check_tokens(&token_pair).await.unwrap();
 
             self.request
                 .header("Accept", "application/vnd.github+json")
@@ -83,12 +84,13 @@ pub mod client {
         }
     }
 
+    #[async_trait]
     impl OauthClient for GitHubClient {
         fn oauth2_scopes(&self) -> Vec<String> {
             vec![]
         }
 
-        fn check_tokens(&self, tokens: &TokenPair) -> Result<TokenPair, Error> {
+        async fn check_tokens(&self, tokens: &TokenPair) -> Result<TokenPair, Error> {
             let token_data = &tokens.access_token_data;
 
             if token_data.expires_in.is_none() {
@@ -102,7 +104,8 @@ pub mod client {
             let token = self
                 .client
                 .exchange_refresh_token(&tokens.refresh_token.clone().unwrap())
-                .request(http_client)
+                .request_async(async_http_client)
+                .await
                 .unwrap();
 
             let token_data = AccessTokenData {
