@@ -1,6 +1,8 @@
 use crate::Error;
+use async_trait::async_trait;
 use libflatsync_common::providers::oauth_client::TokenPair;
 
+#[async_trait]
 pub trait OauthClient {
     fn oauth2_scopes(&self) -> Vec<String>;
     /// Checks access token for validity (i.e. expiry time).
@@ -13,5 +15,5 @@ pub trait OauthClient {
     /// # Error
     ///
     /// Errors out when no valid access token was found and/or no valid tokens could be acquired (i.e. expired/revoked refresh token).
-    fn check_tokens(&self, tokens: &TokenPair) -> Result<TokenPair, Error>;
+    async fn check_tokens(&self, tokens: &TokenPair) -> Result<TokenPair, Error>;
 }
