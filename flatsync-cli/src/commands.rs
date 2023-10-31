@@ -1,6 +1,6 @@
 use clap::Subcommand;
 use libflatsync_common::dbus::DaemonProxy;
-use libflatsync_common::providers::github::GitHubProvider;
+use libflatsync_common::providers::github::{GitHubProvider, GH_APP_INSTALLATION_URL};
 use libflatsync_common::providers::oauth_client::OauthClientDeviceFlow;
 use libflatsync_common::providers::providers_list::Providers;
 use log::info;
@@ -46,8 +46,10 @@ async fn init_for_github(
 
     let device_auth_res = github.device_code().await.unwrap();
 
+    println!("Please install FlatSync as a GitHub app to your account **first** by following this link: {:?}.\nThis is required because GitHub's API doesn't allow us to interact with Gists without additional permission via a GitHub App installation.", GH_APP_INSTALLATION_URL);
+
     println!(
-        "Please visit {:?} and enter the following code: {:?}",
+        "Afterwards, please visit {:?} and enter the following code: {:?}",
         &device_auth_res.verification_uri().to_string(),
         &device_auth_res.user_code().secret().to_string()
     );
