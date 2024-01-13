@@ -96,7 +96,7 @@ mod imp {
     impl WidgetImpl for FlatsyncApplicationWindow {}
     impl WindowImpl for FlatsyncApplicationWindow {
         // Save window state on delete event
-        fn close_request(&self) -> gtk::Inhibit {
+        fn close_request(&self) -> glib::Propagation {
             if let Err(err) = self.obj().save_window_size() {
                 log::warn!("Failed to save window state, {}", &err);
             }
