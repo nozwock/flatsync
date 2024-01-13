@@ -8,17 +8,17 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1.72"
 anyhow = "1"
-ashpd = { version = "0.4.0", default-features = false, features = ["tokio"] }
+ashpd = { version = "0.6", default-features = false, features = ["tokio"] }
 chrono = { version = "0.4", features = ["serde"] }
-delegate = "0.10.0"
+delegate = "0.12"
 diff-struct = "0.5"
-glib = "0.17"
-gio = "0.17"
-libflatpak = { version = "0.3.0", features = ["v1_13_3"] }
+glib = "0.18"
+gio = "0.18"
+libflatpak = { version = "0.4", features = ["v1_13_3"] }
 libflatsync-common = { path = "../libflatsync-common" }
 log = "0.4"
 oauth2 = "4.4.1"
-oo7 = { version = "0.1.0-beta.3", default-features = false, features = [
+oo7 = { version = "0.2", default-features = false, features = [
   "tokio",
   "openssl_crypto",
 ] }
