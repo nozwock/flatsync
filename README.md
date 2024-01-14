@@ -14,6 +14,16 @@ Since the project should be useable on Silverblue, it’d be good if the binary 
 
 => Familiarity with Rust & DBus
 
+# Getting Started
+
+1. **Generate `config.rs`**: Run `meson setup build` to create essential configuration files.
+
+2. **Install Dependencies** (For Red Hat-based systems like RHEL, CentOS, Fedora):
+
+   ```bash
+   sudo dnf install libadwaita-devel flatpak-devel gtk4-devel
+    ```
+
 # Communication
 
 * Matrix: You can join the chat room [here](https://matrix.to/#/#flatsync:gnome.org)
