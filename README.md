@@ -1,10 +1,10 @@
-# Flatpak synching between machines
+# FlatSync
 
-Currently, it’s rather bothersome to sync the Flatpak packages installed on multiple systems: One either has to manually keep them in sync or use the CLI to get a list of installed Flatpaks.
+Synchronise your Flatpak packages across machines
 
-As such, it would be useful to have an application that can do this for users. The go-to approach would be a D-Bus daemon that automatically (either on changes or periodically) creates a list of installed Flatpaks and pushes it to a service like GitHub Gists. If a new version is detected (which comes from a different system), the daemon would fetch it and adjust the local installation accordingly.
+Currently, it’s rather bothersome to sync the Flatpak packages installed on multiple systems: One either has to manually keep them in sync or use the CLI to get a list of installed Flatpaks. To improve this situation, FlatSync was created. It creates a D-Bus daemon that automatically collects a list of installed Flatpaks and pushes it to a service like GitHub Gists. It also pulls configuration from this service and installs Flatpaks that are missing remotely.
 
-Additionally, there should be a GUI application that can interface with the daemon for setup and configuration. A CLI application for usage independent of the DE and manual syncing would be a plus.
+To interact with this daemon, FlatSync provides both a CLI and a GUI component, see [Architecture](#architecture).
 
 # Getting Started
 
