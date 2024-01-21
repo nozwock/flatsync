@@ -17,7 +17,8 @@ fn main() -> glib::ExitCode {
 
     glib::set_application_name(&gettext("FlatSync"));
 
-    let res = gio::Resource::load(RESOURCES_FILE).expect("Could not load gresource file");
+    let res = gio::Resource::load(RESOURCES_FILE)
+        .expect("Could not load gresource file - did you run ninja -C build install?");
     gio::resources_register(&res);
 
     let app = FlatsyncApplication::default();
