@@ -2,6 +2,7 @@ use crate::models::{FlatpakInstallationStorageType, FlatpakRef, FlatpakRemote};
 use libflatpak::{gio, glib, prelude::*, Installation};
 use std::path::PathBuf;
 
+/// Represents a Flatpak installation. This is a subset of the `libflatpak::Installation` struct which can be diffed and serialized.
 #[derive(
     Debug, Default, Clone, diff_derive::Diff, PartialEq, serde::Serialize, serde::Deserialize,
 )]
@@ -16,6 +17,15 @@ pub struct FlatpakInstallation {
     pub remotes: Vec<FlatpakRemote>,
 }
 
+/// Converts an object implementing the `libflatpak::Installation` trait into a `FlatpakInstallation` struct.
+///
+/// # Arguments
+///
+/// * `value` - The object implementing the `libflatpak::Installation` trait.
+///
+/// # Returns
+///
+/// The converted `FlatpakInstallation` struct.
 impl<O: glib::IsA<libflatpak::Installation>> From<O> for FlatpakInstallation {
     fn from(value: O) -> Self {
         let value = value.upcast();
@@ -42,6 +52,11 @@ impl<O: glib::IsA<libflatpak::Installation>> From<O> for FlatpakInstallation {
 }
 
 impl FlatpakInstallation {
+    /// Creates a new `FlatpakInstallation` instance representing the user installation.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error of type `crate::Error` if the query for the user installation fails.
     pub fn user_installation() -> Result<Self, crate::Error> {
         match Installation::new_user(gio::Cancellable::NONE) {
             Ok(item) => Ok(item.into()),

@@ -1,5 +1,6 @@
 use std::fmt;
 
+/// Represents the kind of Flatpak installation. This is either a user or system installation.
 #[derive(
     Hash, Debug, Clone, Copy, serde::Serialize, serde::Deserialize, Eq, PartialEq, PartialOrd, Ord,
 )]

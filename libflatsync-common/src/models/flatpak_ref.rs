@@ -1,6 +1,7 @@
 use crate::models::FlatpakRefKind;
 use libflatpak::{glib, prelude::*};
 
+/// Represents a Flatpak reference. This is a subset of the `libflatpak::InstalledRef` struct which can be diffed and serialized.
 #[derive(
     Debug,
     Default,
@@ -29,6 +30,15 @@ pub struct FlatpakRef {
     pub oars: Option<String>,
 }
 
+/// Converts a `libflatpak::InstalledRef` into a `FlatpakRef` struct.
+///
+/// # Arguments
+///
+/// * `value` - The value to convert into a `FlatpakRef`.
+///
+/// # Returns
+///
+/// The converted `FlatpakRef` struct.
 impl<O: glib::IsA<libflatpak::InstalledRef>> From<O> for FlatpakRef {
     #[must_use]
     fn from(value: O) -> Self {

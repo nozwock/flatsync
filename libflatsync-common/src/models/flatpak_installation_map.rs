@@ -2,6 +2,7 @@ pub use crate::models::{FlatpakInstallation, FlatpakInstallationKind};
 use libflatpak::{gio, prelude::*};
 use std::collections::BTreeMap;
 
+/// Maps `FlatpakInstallationKind` to `FlatpakInstallation`, so that we can easily access the user and system installations.
 #[derive(Debug, Clone, diff_derive::Diff, serde::Serialize, serde::Deserialize)]
 #[diff(attr(#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]))]
 #[repr(transparent)]
@@ -9,6 +10,7 @@ use std::collections::BTreeMap;
 pub struct FlatpakInstallationMap(pub BTreeMap<FlatpakInstallationKind, FlatpakInstallation>);
 
 impl FlatpakInstallationMap {
+    /// Queries the system for available Flatpak installations.
     pub fn available_installations() -> Result<Self, crate::Error> {
         let mut ret: BTreeMap<_, _> = match libflatpak::system_installations(gio::Cancellable::NONE)
         {

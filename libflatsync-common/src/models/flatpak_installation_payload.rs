@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use log::trace;
 use std::path::Path;
 
+/// Represents a payload containing a list of Flatpak installations. This is either stored locally or sent to the gists server.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct FlatpakInstallationPayload {
     pub installations: FlatpakInstallationMap,
@@ -46,6 +47,7 @@ impl FlatpakInstallationPayload {
         Ok(file_payload)
     }
 
+    /// Write the `FlatpakInstallationPayload` to a file, overwriting it if it already exists.
     pub fn write_to_file<P: AsRef<Path>>(&self, file_path: &P) -> Result<(), Error> {
         let serialized = serde_json::to_string(self).map_err(|e| {
             Error::FlatpakInstallationFileFailure(format!(

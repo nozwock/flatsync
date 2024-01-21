@@ -1,6 +1,7 @@
 use crate::models::FlatpakRemoteType;
 use libflatpak::{glib, prelude::*};
 
+/// Represents a Flatpak remote. This is a subset of the `libflatpak::Remote` struct which can be diffed and serialized.
 #[derive(
     Debug, Default, Clone, diff_derive::Diff, PartialEq, serde::Serialize, serde::Deserialize,
 )]
@@ -16,6 +17,15 @@ pub struct FlatpakRemote {
     pub prio: i32,
 }
 
+/// Converts a `libflatpak::Remote` into a `FlatpakRemote` struct.
+///
+/// # Arguments
+///
+/// * `value` - The value to convert into `FlatpakRemote`.
+///
+/// # Returns
+///
+/// Returns a `FlatpakRemote` struct.
 impl<O: glib::IsA<libflatpak::Remote>> From<O> for FlatpakRemote {
     #[must_use]
     fn from(value: O) -> Self {
@@ -38,7 +48,17 @@ impl<O: glib::IsA<libflatpak::Remote>> From<O> for FlatpakRemote {
     }
 }
 
+/// Converts a `FlatpakRemote` into a `libflatpak::Remote`.
 impl From<&FlatpakRemote> for libflatpak::Remote {
+    /// Converts a `FlatpakRemote` into a `libflatpak::Remote`.
+    ///
+    /// # Arguments
+    ///
+    /// * `remote` - The `FlatpakRemote` to convert.
+    ///
+    /// # Returns
+    ///
+    /// The converted `libflatpak::Remote`.
     fn from(remote: &FlatpakRemote) -> Self {
         let ret = libflatpak::Remote::new(&remote.name);
         if let Some(val) = &remote.title {
