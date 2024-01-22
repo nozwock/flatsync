@@ -36,13 +36,16 @@ clippy:
     - apk add flatpak-dev gtk4.0-dev musl-dev openssl-dev meson desktop-file-utils git libadwaita-dev
     - rustup component add clippy
     - meson setup _build
-    - env CODEGEN_BUILD_DIR=$(pwd)/_build/libflatsync-common/src cargo clippy --all
+    - cargo clippy --all
 
 rustfmt:
   image: "rust:slim"
   stage: check
   script:
     - rustup component add rustfmt
+    # Create blank versions of our configured files
+    # so rustfmt does not yell about non-existent files or completely empty files
+    - echo -e "" >> src/config.rs
     - rustc -Vv && cargo -Vv
     - cargo fmt --version
     - cargo fmt --all -- --color=always --check

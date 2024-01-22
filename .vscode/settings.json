@@ -15,14 +15,10 @@
         "build",
         "_build"
     ],
-    "rust-analyzer.cargo.extraEnv": {
-        "CODEGEN_BUILD_DIR": "${workspaceFolder}/build/libflatsync-common/src"
-    },
     "rust-analyzer.check.command": "clippy",
     "terminal.integrated.env.linux": {
         "RUST_BACKTRACE": "1",
-        "RUST_LOG": "trace",
-        "CODEGEN_BUILD_DIR": "${workspaceFolder}/build/libflatsync-common/src"
+        "RUST_LOG": "info"
     },
     "[json]": {
         "editor.defaultFormatter": "vscode.json-language-features"

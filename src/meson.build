@@ -12,7 +12,6 @@ endif
 
 cargo_env = [
   'CARGO_HOME=' + meson.project_build_root() / 'cargo-home',
-  'CODEGEN_BUILD_DIR=' + meson.build_root() / 'libflatsync-common' / 'src',
 ]
 
 cargo_options_mut = cargo_options
