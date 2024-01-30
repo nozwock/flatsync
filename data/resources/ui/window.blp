@@ -36,12 +36,14 @@ template $FlatsyncApplicationWindow : ApplicationWindow {
 
       Adw.PasswordEntryRow github_token_entry {
         show-apply-button: true;
-        title: "GitHub Token";
+        title: "GitHub _Token";
+        use-underline: true;
       }
 
       Adw.EntryRow github_id_entry {
         show-apply-button: true;
-        title: "Gists ID (leave empty if this is the first machine using flatsync)";
+        title: "_Gists ID (leave empty if this is the first machine using flatsync)";
+        use-underline: true;
       }
     }
   }
