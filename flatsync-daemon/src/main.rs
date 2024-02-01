@@ -13,13 +13,19 @@ pub use error::Error;
 mod imp;
 mod settings;
 
-enum MessageType {
+pub struct ManualSync;
+
+pub enum MessageType {
     FlatpakInstallationChanged,
-    TimeToPoll,
+    TimeToPoll(Option<ManualSync>),
 }
 
-async fn poll_remote(ctx: &mut context::Context, imp: &imp::Impl) -> Result<(), Error> {
-    if gio::NetworkMonitor::default().is_network_metered() {
+async fn poll_remote(
+    ctx: &mut context::Context,
+    imp: &imp::Impl,
+    manual_sync: bool,
+) -> Result<(), Error> {
+    if gio::NetworkMonitor::default().is_network_metered() && !manual_sync {
         debug!("Network is metered, skipping remote poll...");
         return Ok(());
     }
@@ -72,7 +78,10 @@ async fn poll_remote(ctx: &mut context::Context, imp: &imp::Impl) -> Result<(), 
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
 
-    let daemon = dbus::Daemon::new().await?;
+    let (sender_flatpak_installation_changed, mut reciever) =
+        tokio::sync::mpsc::channel::<MessageType>(1);
+
+    let daemon = dbus::Daemon::new(sender_flatpak_installation_changed.clone()).await?;
 
     let _con = ConnectionBuilder::session()?
         .name("app.drey.FlatSync.Daemon")?
@@ -87,9 +96,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let imp = imp::Impl::new().await?;
 
     let mut ctx = context::Context::new()?;
-
-    let (sender_flatpak_installation_changed, mut reciever) =
-        tokio::sync::mpsc::channel::<MessageType>(1);
 
     // We need a second sender to send a signal for polling the remote every X seconds (defined by the interval above)
     let sender_remote_poll_interval = sender_flatpak_installation_changed.clone();
@@ -132,7 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         loop {
             interval.tick().await;
             sender_remote_poll_interval
-                .send(MessageType::TimeToPoll)
+                .send(MessageType::TimeToPoll(None))
                 .await
                 .unwrap();
         }
@@ -147,8 +153,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ctx.refresh_local_installations()?;
             }
 
-            if let Err(e) = poll_remote(&mut ctx, &imp).await {
-                error!("{}", e.to_string());
+            let manual_sync = matches!(msg, MessageType::TimeToPoll(Some(ManualSync)));
+
+            if imp.autosync() || manual_sync {
+                if let Err(e) = poll_remote(&mut ctx, &imp, manual_sync).await {
+                    error!("{}", e.to_string());
+                }
             }
         }
     }

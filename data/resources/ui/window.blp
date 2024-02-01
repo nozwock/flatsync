@@ -44,5 +44,13 @@ template $FlatsyncApplicationWindow : ApplicationWindow {
         title: "Gists ID (leave empty if this is the first machine using flatsync)";
       }
     }
+    Adw.PreferencesGroup {
+      title: "Daemon Settings";
+
+      Adw.SwitchRow autosync_entry {
+        title: "Autosync";
+        subtitle: "Turn off to only sync manually";
+      }
+    }
   }
 }

@@ -2,14 +2,18 @@ use crate::{imp::Impl, DBusError};
 use log::{debug, info};
 use zbus::dbus_interface;
 
+use crate::ManualSync;
+use crate::MessageType;
+
 pub struct Daemon {
     imp: Impl,
+    sender: tokio::sync::mpsc::Sender<MessageType>,
 }
 
 impl Daemon {
-    pub async fn new() -> Result<Self, crate::Error> {
+    pub async fn new(sender: tokio::sync::mpsc::Sender<MessageType>) -> Result<Self, crate::Error> {
         let imp = Impl::new().await?;
-        Ok(Self { imp })
+        Ok(Self { imp, sender })
     }
 }
 
@@ -48,6 +52,27 @@ impl Daemon {
     async fn set_gist_id(&self, id: &str) -> Result<(), DBusError> {
         self.imp.set_gist_id(id);
 
+        Ok(())
+    }
+
+    async fn sync_now(&self) -> Result<bool, DBusError> {
+        info!("Starting Manual Sync");
+        match self
+            .sender
+            .send(MessageType::TimeToPoll(Some(ManualSync)))
+            .await
+        {
+            Ok(_) => Ok(true),
+            Err(_) => Err(DBusError::SendError),
+        }
+    }
+
+    async fn autosync(&self) -> Result<bool, DBusError> {
+        Ok(self.imp.autosync())
+    }
+
+    async fn set_autosync(&self, autosync: bool) -> Result<(), DBusError> {
+        self.imp.set_autosync(autosync);
         Ok(())
     }
 

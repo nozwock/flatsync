@@ -21,6 +21,15 @@ pub enum Commands {
         #[arg(long, default_value_t = false)]
         uninstall: bool,
     },
+    /// Start the syncing process manually
+    SyncNow,
+    /// Controls the Autosync Behaviour
+    Autosync {
+        #[arg(long, default_value_t = true)]
+        get_autosync: bool,
+        #[arg(long)]
+        set_autosync: Option<bool>,
+    },
 }
 
 pub async fn init(
