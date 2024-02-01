@@ -90,7 +90,7 @@ impl FlatsyncApplication {
         // About
         let action_about = gio::ActionEntry::builder("about")
             .activate(|app: &Self, _, _| {
-                app.show_about_dialog();
+                app.show_about_window();
             })
             .build();
         self.add_action_entries([action_quit, action_about]);
@@ -114,22 +114,23 @@ impl FlatsyncApplication {
         }
     }
 
-    fn show_about_dialog(&self) {
-        let dialog = gtk::AboutDialog::builder()
-            .logo_icon_name(APP_ID)
-            // Insert your license of choice here
-            // .license_type(gtk::License::MitX11)
-            // Insert your website here
-            // .website("https://gitlab.gnome.org/bilelmoussaoui/flatsync/")
+    fn show_about_window(&self) {
+        let about_window = adw::AboutWindow::builder()
+            .application_icon(APP_ID)
+            .application_name("Flatsync")
+            .developer_name("Rasmus Thomsen")
             .version(VERSION)
+            // TODO: Add License
             .transient_for(&self.main_window())
             .translator_credits(gettext("translator-credits"))
             .modal(true)
-            .authors(vec!["Rasmus Thomsen"])
+            .developers(vec!["Rasmus Thomsen"])
             .artists(vec!["Rasmus Thomsen"])
+            .website("https://gitlab.gnome.org/Cogitri/flatsync")
+            .issue_url("https://gitlab.gnome.org/Cogitri/flatsync/-/issues")
             .build();
 
-        dialog.present();
+        about_window.present();
     }
 
     pub fn run(&self) -> glib::ExitCode {
