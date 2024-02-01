@@ -1,4 +1,3 @@
-use gio::prelude::NetworkMonitorExt;
 use libflatpak::gio::prelude::*;
 use libflatpak::prelude::*;
 use log::{debug, error, info, warn};
@@ -25,10 +24,20 @@ async fn poll_remote(
     imp: &imp::Impl,
     manual_sync: bool,
 ) -> Result<(), Error> {
-    if gio::NetworkMonitor::default().is_network_metered() && !manual_sync {
-        debug!("Network is metered, skipping remote poll...");
+    let network_is_metered = gio::NetworkMonitor::default().is_network_metered();
+    let power_saver_is_enabled = gio::PowerProfileMonitor::get_default().is_power_saver_enabled();
+
+    if network_is_metered || power_saver_is_enabled {
+        if network_is_metered {
+            debug!("Network is metered, skipping remote poll...");
+        }
+        if power_saver_is_enabled {
+            debug!("Power Saver is enabled, skipping remote poll...");
+        }
+
         return Ok(());
     }
+
     let res = imp.fetch_gist().await;
     match res {
         Ok(Some(remote)) => {
