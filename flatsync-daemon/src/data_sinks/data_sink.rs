@@ -34,6 +34,14 @@ pub trait DataSink {
             .unwrap();
     }
 
+    fn autosync(&self) -> bool {
+        Settings::instance().get("autosync")
+    }
+
+    fn set_autosync(&self, autosync: bool) {
+        Settings::instance().set("autosync", autosync).unwrap();
+    }
+
     async fn set_secret(&self, secret: &str) -> Result<(), Error> {
         let keyring = self.keyring().await;
         keyring.unlock().await?;

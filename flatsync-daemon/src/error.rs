@@ -52,4 +52,6 @@ pub enum DBusError {
     InvalidSecret,
     #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.AutoStartFailure")]
     AutoStartFailure,
+    #[dbus_error(name = "app.drey.FlatSync.Daemon.Error.SendError")]
+    SendError,
 }

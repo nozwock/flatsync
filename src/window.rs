@@ -25,6 +25,8 @@ mod imp {
         pub github_token_entry: TemplateChild<adw::PasswordEntryRow>,
         #[template_child]
         pub github_id_entry: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub autosync_entry: TemplateChild<adw::SwitchRow>,
         pub settings: gio::Settings,
         pub proxy: OnceCell<DaemonProxy<'static>>,
         pub tokio_runtime: OnceCell<Runtime>,
@@ -36,6 +38,7 @@ mod imp {
                 headerbar: TemplateChild::default(),
                 github_token_entry: TemplateChild::default(),
                 github_id_entry: TemplateChild::default(),
+                autosync_entry: TemplateChild::default(),
                 settings: gio::Settings::new(APP_ID),
                 proxy: OnceCell::new(),
                 tokio_runtime: OnceCell::new(),
@@ -183,5 +186,9 @@ impl FlatsyncApplicationWindow {
             .set_text(&imp.settings.get::<String>("github-gists-id"));
 
         imp.github_token_entry.set_text("1234");
+
+        imp.settings
+            .bind("autosync", &imp.autosync_entry.get(), "active")
+            .build();
     }
 }

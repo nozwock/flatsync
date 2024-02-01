@@ -13,5 +13,8 @@ pub trait Daemon {
     async fn create_gist(&self) -> Result<String>;
     async fn post_gist(&self) -> Result<()>;
     async fn set_gist_id(&self, id: &str) -> Result<()>;
+    async fn sync_now(&self) -> Result<bool>;
+    async fn autosync(&self) -> Result<bool>;
+    async fn set_autosync(&self, autosync: bool) -> Result<()>;
     async fn autostart_file(&self, install: bool) -> Result<()>;
 }

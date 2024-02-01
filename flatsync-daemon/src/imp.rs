@@ -27,6 +27,14 @@ impl Impl {
         self.sink.set_sink_id(id);
     }
 
+    pub fn autosync(&self) -> bool {
+        self.sink.autosync()
+    }
+
+    pub fn set_autosync(&self, autosync: bool) {
+        self.sink.set_autosync(autosync)
+    }
+
     pub async fn post_gist(&self) -> Result<(), Error> {
         let payload = FlatpakInstallationPayload::new_from_system()
             .map_err(Error::FlatpakInstallationQueryFailure)?;
