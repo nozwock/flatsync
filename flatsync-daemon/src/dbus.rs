@@ -76,6 +76,15 @@ impl Daemon {
         Ok(())
     }
 
+    async fn autosync_timer(&self) -> Result<u32, DBusError> {
+        Ok(self.imp.autosync_timer())
+    }
+
+    async fn set_autosync_timer(&self, timer: u32) -> Result<(), DBusError> {
+        self.imp.set_autosync_timer(timer);
+        Ok(())
+    }
+
     async fn autostart_file(&mut self, install: bool) -> Result<(), DBusError> {
         self.imp
             .autostart_file(install)

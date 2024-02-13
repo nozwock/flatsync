@@ -715,6 +715,8 @@ name = "flatsync-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "gio",
+ "glib",
  "libflatsync-common",
  "log",
  "pretty_env_logger",
@@ -733,6 +735,7 @@ dependencies = [
  "chrono",
  "delegate",
  "diff-struct",
+ "futures-executor",
  "gio",
  "glib",
  "libflatpak",

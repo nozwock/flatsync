@@ -1,9 +1,12 @@
+use gio::prelude::*;
+use glib::FromVariant;
 use std::process;
+
+use libflatsync_common::config::APP_ID;
 
 use clap::Parser;
 use libflatsync_common::dbus::DaemonProxy;
 use zbus::Connection;
-
 mod commands;
 
 use crate::commands::*;
@@ -40,10 +43,7 @@ async fn main() -> Result<(), zbus::Error> {
                     process::exit(1);
                 }
             },
-            Err(_) => {
-                eprintln!("Something Went Wrong, is the Daemon running?");
-                process::exit(1);
-            }
+            Err(error) => handle_daemon_error(error),
         },
         Commands::Autosync {
             get_autosync,
@@ -52,19 +52,47 @@ async fn main() -> Result<(), zbus::Error> {
             if get_autosync {
                 match proxy.autosync().await {
                     Ok(autosync) => println!("Autosync: {}", autosync),
-                    Err(err) => {
-                        eprintln!("Something Went Wrong, is the Daemon running?\n {}", err);
-                        process::exit(1);
-                    }
+                    Err(error) => handle_daemon_error(error),
                 }
             }
             if let Some(new_setting) = set_autosync {
                 match proxy.set_autosync(new_setting).await {
                     Ok(_) => println!("Setting Autosync to {}", new_setting),
-                    Err(err) => {
-                        eprintln!("Something Went Wrong, is the Daemon running?\n {}", err);
-                        process::exit(1);
+                    Err(error) => handle_daemon_error(error),
+                }
+            }
+        }
+        Commands::AutosyncTimer {
+            get_autosync_timer,
+            set_autosync_timer,
+        } => {
+            if get_autosync_timer {
+                match proxy.autosync_timer().await {
+                    Ok(autosync_timer) => println!("Autosync Timer: {}", autosync_timer),
+                    Err(error) => handle_daemon_error(error),
+                }
+            }
+            if let Some(new_timer) = set_autosync_timer {
+                let autosync_timer_key = gio::Settings::new(APP_ID)
+                    .settings_schema()
+                    .unwrap()
+                    .key("autosync-timer");
+                let new_timer_variant = glib::Variant::from(new_timer);
+
+                if autosync_timer_key.range_check(&new_timer_variant) {
+                    match proxy.set_autosync_timer(new_timer).await {
+                        Ok(_) => println!("Setting Autosync Timer to {}", new_timer),
+                        Err(error) => handle_daemon_error(error),
                     }
+                } else {
+                    let range_variant = autosync_timer_key.range().child_value(1).child_value(0);
+                    let range = <(u32, u32)>::from_variant(&range_variant).unwrap();
+
+                    eprintln!(
+                        "Value {} is out of range. Range is {}-{}.",
+                        new_timer, range.0, range.1
+                    );
+                    process::exit(1);
                 }
             }
         }

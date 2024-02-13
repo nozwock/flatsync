@@ -4,6 +4,7 @@ use libflatsync_common::providers::github::{GitHubProvider, GH_APP_INSTALLATION_
 use libflatsync_common::providers::oauth_client::OauthClientDeviceFlow;
 use libflatsync_common::providers::providers_list::Providers;
 use log::info;
+use std::process;
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
@@ -29,6 +30,13 @@ pub enum Commands {
         get_autosync: bool,
         #[arg(long)]
         set_autosync: Option<bool>,
+    },
+    /// Controls how Often Sync happens in Minutes
+    AutosyncTimer {
+        #[arg(long, default_value_t = true)]
+        get_autosync_timer: bool,
+        #[arg(long)]
+        set_autosync_timer: Option<u32>,
     },
 }
 
@@ -79,4 +87,9 @@ async fn init_for_github(
     }
 
     Ok(())
+}
+
+pub fn handle_daemon_error(error: zbus::Error) {
+    eprintln!("Something Went Wrong, is the Daemon running?\n {}", error);
+    process::exit(1);
 }

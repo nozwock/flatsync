@@ -3,6 +3,10 @@ use libflatpak::prelude::*;
 use log::{debug, error, info, warn};
 use zbus::ConnectionBuilder;
 
+extern crate futures_executor;
+
+use libflatsync_common::config::APP_ID;
+
 mod context;
 mod data_sinks;
 mod dbus;
@@ -17,6 +21,7 @@ pub struct ManualSync;
 pub enum MessageType {
     FlatpakInstallationChanged,
     TimeToPoll(Option<ManualSync>),
+    TimerChanged,
 }
 
 async fn poll_remote(
@@ -27,7 +32,7 @@ async fn poll_remote(
     let network_is_metered = gio::NetworkMonitor::default().is_network_metered();
     let power_saver_is_enabled = gio::PowerProfileMonitor::get_default().is_power_saver_enabled();
 
-    if network_is_metered || power_saver_is_enabled {
+    if (network_is_metered || power_saver_is_enabled) && !manual_sync {
         if network_is_metered {
             debug!("Network is metered, skipping remote poll...");
         }
@@ -100,11 +105,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Started daemon. Press Ctrl+C to exit");
 
-    let mut interval = tokio::time::interval(std::time::Duration::from_secs(300));
-
     let imp = imp::Impl::new().await?;
 
     let mut ctx = context::Context::new()?;
+
+    let interval = tokio::time::interval(std::time::Duration::from_secs(
+        imp.autosync_timer() as u64 * 60,
+    ));
+
+    let sender_timer_changed = sender_flatpak_installation_changed.clone();
+
+    let settings = gio::Settings::new(APP_ID);
+
+    settings.connect_changed(Some("autosync-timer"), move |_, _| {
+        debug!("Timer Changed");
+        match futures_executor::block_on(sender_timer_changed.send(MessageType::TimerChanged)) {
+            Ok(_) => debug!("Timer Updated"),
+            Err(_) => debug!("Failed to Send Timer Update"),
+        };
+    });
+    // The Setting Key only emits the `changed` signal if it has been read after the listener has been setted up
+    settings.get::<u32>("autosync-timer");
 
     // We need a second sender to send a signal for polling the remote every X seconds (defined by the interval above)
     let sender_remote_poll_interval = sender_flatpak_installation_changed.clone();
@@ -142,16 +163,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         glib_loop.run();
     });
 
-    // This task takes care of polling the remote every X seconds (defined by the interval above)
-    tokio::task::spawn(async move {
-        loop {
-            interval.tick().await;
-            sender_remote_poll_interval
-                .send(MessageType::TimeToPoll(None))
-                .await
-                .unwrap();
-        }
-    });
+    let mut handle = Some(manager_timer_thread(
+        interval,
+        sender_remote_poll_interval.clone(),
+        None,
+    ));
 
     loop {
         // We listen for a new message, which can either indicate local installation changes or timed polling of the remote
@@ -162,13 +178,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ctx.refresh_local_installations()?;
             }
 
+            if matches!(msg, MessageType::TimerChanged) {
+                handle = Some(manager_timer_thread(
+                    tokio::time::interval(std::time::Duration::from_secs(
+                        imp.autosync_timer() as u64 * 60,
+                    )),
+                    sender_remote_poll_interval.clone(),
+                    handle,
+                ));
+            }
+
             let manual_sync = matches!(msg, MessageType::TimeToPoll(Some(ManualSync)));
 
-            if imp.autosync() || manual_sync {
+            if (imp.autosync() || manual_sync) && !matches!(msg, MessageType::TimerChanged) {
                 if let Err(e) = poll_remote(&mut ctx, &imp, manual_sync).await {
                     error!("{}", e.to_string());
                 }
             }
         }
     }
+}
+
+fn manager_timer_thread(
+    mut interval: tokio::time::Interval,
+    sender: tokio::sync::mpsc::Sender<MessageType>,
+    previous_thread: Option<tokio::task::JoinHandle<()>>,
+) -> tokio::task::JoinHandle<()> {
+    if let Some(handle) = previous_thread {
+        handle.abort();
+    }
+    tokio::task::spawn(async move {
+        loop {
+            interval.tick().await;
+            sender.send(MessageType::TimeToPoll(None)).await.unwrap();
+        }
+    })
 }
