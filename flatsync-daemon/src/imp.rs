@@ -35,6 +35,14 @@ impl Impl {
         self.sink.set_autosync(autosync)
     }
 
+    pub fn autosync_timer(&self) -> u32 {
+        self.sink.autosync_timer()
+    }
+
+    pub fn set_autosync_timer(&self, timer: u32) {
+        self.sink.set_autosync_timer(timer);
+    }
+
     pub async fn post_gist(&self) -> Result<(), Error> {
         let payload = FlatpakInstallationPayload::new_from_system()
             .map_err(Error::FlatpakInstallationQueryFailure)?;

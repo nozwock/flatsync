@@ -16,5 +16,7 @@ pub trait Daemon {
     async fn sync_now(&self) -> Result<bool>;
     async fn autosync(&self) -> Result<bool>;
     async fn set_autosync(&self, autosync: bool) -> Result<()>;
+    async fn autosync_timer(&self) -> Result<u32>;
+    async fn set_autosync_timer(&self, timer: u32) -> Result<()>;
     async fn autostart_file(&self, install: bool) -> Result<()>;
 }

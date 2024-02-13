@@ -1,5 +1,6 @@
 use crate::application::FlatsyncApplication;
 use adw::prelude::*;
+use glib::FromVariant;
 use gtk::glib::MainContext;
 use gtk::subclass::prelude::*;
 use gtk::{
@@ -26,7 +27,11 @@ mod imp {
         #[template_child]
         pub github_id_entry: TemplateChild<adw::EntryRow>,
         #[template_child]
-        pub autosync_entry: TemplateChild<adw::SwitchRow>,
+        pub autosync_switch: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub autosync_timer_spin: TemplateChild<adw::SpinRow>,
+        #[template_child]
+        pub autosync_timer_adjustment: TemplateChild<gtk::Adjustment>,
         pub settings: gio::Settings,
         pub proxy: OnceCell<DaemonProxy<'static>>,
         pub tokio_runtime: OnceCell<Runtime>,
@@ -38,7 +43,9 @@ mod imp {
                 headerbar: TemplateChild::default(),
                 github_token_entry: TemplateChild::default(),
                 github_id_entry: TemplateChild::default(),
-                autosync_entry: TemplateChild::default(),
+                autosync_switch: TemplateChild::default(),
+                autosync_timer_spin: TemplateChild::default(),
+                autosync_timer_adjustment: TemplateChild::default(),
                 settings: gio::Settings::new(APP_ID),
                 proxy: OnceCell::new(),
                 tokio_runtime: OnceCell::new(),
@@ -188,7 +195,22 @@ impl FlatsyncApplicationWindow {
         imp.github_token_entry.set_text("1234");
 
         imp.settings
-            .bind("autosync", &imp.autosync_entry.get(), "active")
+            .bind("autosync", &imp.autosync_switch.get(), "active")
+            .build();
+
+        let autosync_timer_key = imp
+            .settings
+            .settings_schema()
+            .unwrap()
+            .key("autosync-timer");
+        let range_variant = autosync_timer_key.range().child_value(1).child_value(0);
+        let range = <(u32, u32)>::from_variant(&range_variant).unwrap();
+
+        imp.autosync_timer_adjustment.set_lower(range.0.into());
+        imp.autosync_timer_adjustment.set_upper(range.1.into());
+
+        imp.settings
+            .bind("autosync-timer", &imp.autosync_timer_spin.get(), "value")
             .build();
     }
 }
