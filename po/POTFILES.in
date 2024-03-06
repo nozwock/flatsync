@@ -3,4 +3,6 @@ data/app.drey.FlatSync.gschema.xml.in
 data/app.drey.FlatSync.metainfo.xml.in.in
 data/resources/ui/shortcuts.blp
 data/resources/ui/window.blp
+data/resources/ui/preferences.blp
 src/application.rs
+src/window.rs

@@ -1,0 +1,49 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $FlatsyncPreferencesWindow : Adw.PreferencesWindow {
+  Adw.PreferencesPage page {
+    Adw.PreferencesGroup {
+      title: "GitHub Gists Settings";
+
+      Adw.PasswordEntryRow github_token_entry {
+        show-apply-button: true;
+        title: "GitHub _Token";
+        use-underline: true;
+      }
+
+      Adw.EntryRow github_id_entry {
+        show-apply-button: true;
+        title: "_Gists ID (leave empty if this is the first machine using flatsync)";
+        use-underline: true;
+      }
+    }
+    Adw.PreferencesGroup {
+      title: _("Daemon Settings");
+
+      Adw.ExpanderRow {
+        title: _("_Autosync Settings");
+        subtitle: _("Settings to change the automatic synchronization behavior against a remote provider");
+        use-underline: true;
+
+        Adw.SwitchRow autosync_switch {
+          title: _("_Autosync");
+          subtitle: _("Toggle on or off to switch between automatic or manual-only synchronization modes");
+          use-underline: true;
+        }
+
+        Adw.SpinRow autosync_timer_spin {
+          title: _("Autosync _Timer");
+          subtitle: _("Adjust the automatic synchronization interval, in minutes");
+          numeric: true;
+          snap-to-ticks: true;
+          use-underline: true;
+          adjustment: Adjustment autosync_timer_adjustment {
+            page-increment: 1;
+            step-increment: 1;
+          };
+        }
+      }
+    }
+  }
+}

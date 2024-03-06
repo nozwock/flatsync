@@ -1,15 +1,15 @@
 use crate::application::FlatsyncApplication;
+use crate::glib::clone;
+use crate::glib::MainContext;
+use crate::network_state::NetworkState;
+use crate::power_state::PowerState;
 use adw::prelude::*;
-use glib::FromVariant;
-use gtk::glib::MainContext;
+use adw::subclass::prelude::AdwApplicationWindowImpl;
+use adw::subclass::prelude::AdwWindowImpl;
+use gettextrs::gettext;
 use gtk::subclass::prelude::*;
-use gtk::{
-    gio,
-    glib::{self, clone},
-};
+use gtk::{gio, glib};
 use libflatsync_common::config::{APP_ID, PROFILE};
-use libflatsync_common::dbus::DaemonProxy;
-use log::error;
 use tokio::runtime::Runtime;
 
 mod imp {
@@ -21,18 +21,14 @@ mod imp {
     #[template(resource = "/app/drey/FlatSync/ui/window.ui")]
     pub struct FlatsyncApplicationWindow {
         #[template_child]
-        pub headerbar: TemplateChild<gtk::HeaderBar>,
+        pub autosync_status: TemplateChild<adw::Banner>,
         #[template_child]
-        pub github_token_entry: TemplateChild<adw::PasswordEntryRow>,
+        pub welcome_status: TemplateChild<adw::StatusPage>,
         #[template_child]
-        pub github_id_entry: TemplateChild<adw::EntryRow>,
-        #[template_child]
-        pub autosync_switch: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub autosync_timer_spin: TemplateChild<adw::SpinRow>,
-        #[template_child]
-        pub autosync_timer_adjustment: TemplateChild<gtk::Adjustment>,
+        pub sync_now_button: TemplateChild<gtk::Button>,
         pub settings: gio::Settings,
+        pub network_monitor: gio::NetworkMonitor,
+        pub power_profile_monitor: gio::PowerProfileMonitor,
         pub proxy: OnceCell<DaemonProxy<'static>>,
         pub tokio_runtime: OnceCell<Runtime>,
     }
@@ -40,13 +36,12 @@ mod imp {
     impl Default for FlatsyncApplicationWindow {
         fn default() -> Self {
             Self {
-                headerbar: TemplateChild::default(),
-                github_token_entry: TemplateChild::default(),
-                github_id_entry: TemplateChild::default(),
-                autosync_switch: TemplateChild::default(),
-                autosync_timer_spin: TemplateChild::default(),
-                autosync_timer_adjustment: TemplateChild::default(),
+                autosync_status: TemplateChild::default(),
+                welcome_status: TemplateChild::default(),
+                sync_now_button: TemplateChild::default(),
                 settings: gio::Settings::new(APP_ID),
+                network_monitor: gio::NetworkMonitor::default(),
+                power_profile_monitor: gio::PowerProfileMonitor::get_default(),
                 proxy: OnceCell::new(),
                 tokio_runtime: OnceCell::new(),
             }
@@ -57,7 +52,7 @@ mod imp {
     impl ObjectSubclass for FlatsyncApplicationWindow {
         const NAME: &'static str = "FlatsyncApplicationWindow";
         type Type = super::FlatsyncApplicationWindow;
-        type ParentType = gtk::ApplicationWindow;
+        type ParentType = adw::ApplicationWindow;
 
         fn class_init(klass: &mut Self::Class) {
             klass.bind_template();
@@ -81,7 +76,7 @@ mod imp {
             }
 
             // Load initial settings
-            obj.setup_settings_values();
+            // obj.setup_settings_values();
 
             // Init zbus proxy
             let (sender, mut reciever) = tokio::sync::mpsc::channel::<DaemonProxy>(1);
@@ -96,6 +91,13 @@ mod imp {
             });
 
             self.proxy.set(reciever.blocking_recv().unwrap()).unwrap();
+
+            //TODO: Load Title and Summary dynamically from metadata
+            self.welcome_status.set_title("FlatSync");
+            self.welcome_status.set_description(Some(&gettext(
+                "Keep your Flatpak apps synchronized between devices",
+            )));
+            self.welcome_status.set_icon_name(Some(APP_ID));
 
             // Load latest window state
             obj.load_window_size();
@@ -117,11 +119,13 @@ mod imp {
     }
 
     impl ApplicationWindowImpl for FlatsyncApplicationWindow {}
+    impl AdwWindowImpl for FlatsyncApplicationWindow {}
+    impl AdwApplicationWindowImpl for FlatsyncApplicationWindow {}
 }
 
 glib::wrapper! {
     pub struct FlatsyncApplicationWindow(ObjectSubclass<imp::FlatsyncApplicationWindow>)
-        @extends gtk::Widget, gtk::Window, gtk::ApplicationWindow,
+        @extends gtk::Widget, gtk::Window, gtk::ApplicationWindow, adw::Window,
         @implements gio::ActionMap, gio::ActionGroup, gtk::Root;
 }
 
@@ -144,10 +148,6 @@ impl FlatsyncApplicationWindow {
         Ok(())
     }
 
-    fn proxy(&self) -> &DaemonProxy<'static> {
-        self.imp().proxy.get().unwrap()
-    }
-
     fn load_window_size(&self) {
         let imp = self.imp();
 
@@ -164,53 +164,113 @@ impl FlatsyncApplicationWindow {
 
     fn connect_handlers(&self) {
         let imp = self.imp();
-        imp.github_id_entry
-            .connect_apply(clone!(@weak self as obj => move |entry| {
-                let ctx = MainContext::default();
-                let text = entry.text();
-                ctx.spawn_local(clone!(@weak obj => async move {
-                    if let Err(e) = obj.proxy().set_gist_id(text.as_str()).await {
-                        error!("{e}");
-                    }
-                }));
+
+        imp.network_monitor
+            .connect_network_changed(clone!(@weak self as obj => move |_, _| {
+                obj.update_autosync_status();
             }));
-        imp.github_token_entry
-            .connect_apply(clone!(@weak self as obj => move |entry| {
+
+        imp.power_profile_monitor
+            .connect_power_saver_enabled_notify(clone!(@weak self as obj => move |_| {
+                obj.update_autosync_status();
+            }));
+
+        imp.settings.connect_changed(
+            Some("autosync"),
+            clone!(@weak self as obj => move |_,_| {
+                obj.update_autosync_status();
+            }),
+        );
+        // The Setting Key only emits the `changed` signal if it has been read after the listener has been setted up
+        imp.settings.get::<bool>("autosync");
+
+        imp.sync_now_button
+            .connect_clicked(clone!(@weak self as obj => move |_| {
                 let ctx = MainContext::default();
-                let text = entry.text();
                 ctx.spawn_local(clone!(@weak obj => async move {
-                    if let Err(e) = obj.proxy().set_gist_secret(text.as_str()).await {
-                        error!("{e}");
-                    }
+                    let _ = obj.imp().proxy.get().unwrap().sync_now().await;
                 }));
             }));
     }
 
-    fn setup_settings_values(&self) {
+    fn network_state(&self) -> NetworkState {
         let imp = self.imp();
 
-        imp.github_id_entry
-            .set_text(&imp.settings.get::<String>("github-gists-id"));
+        let network_is_metered = imp.network_monitor.is_network_metered();
+        let network_is_available = imp.network_monitor.is_network_available();
 
-        imp.github_token_entry.set_text("1234");
-
-        imp.settings
-            .bind("autosync", &imp.autosync_switch.get(), "active")
-            .build();
-
-        let autosync_timer_key = imp
-            .settings
-            .settings_schema()
-            .unwrap()
-            .key("autosync-timer");
-        let range_variant = autosync_timer_key.range().child_value(1).child_value(0);
-        let range = <(u32, u32)>::from_variant(&range_variant).unwrap();
-
-        imp.autosync_timer_adjustment.set_lower(range.0.into());
-        imp.autosync_timer_adjustment.set_upper(range.1.into());
-
-        imp.settings
-            .bind("autosync-timer", &imp.autosync_timer_spin.get(), "value")
-            .build();
+        match (network_is_metered, network_is_available) {
+            (_, false) => NetworkState::NoNetwork,
+            (false, true) => NetworkState::Ok,
+            (true, _) => NetworkState::NetworkMetered,
+        }
     }
+
+    fn power_state(&self) -> PowerState {
+        let imp = self.imp();
+
+        match imp.power_profile_monitor.is_power_saver_enabled() {
+            true => PowerState::PowerSaver,
+            false => PowerState::Ok,
+        }
+    }
+
+    fn update_sync_now_button(&self, network_monitor_state: NetworkState) {
+        let imp = self.imp();
+
+        match network_monitor_state {
+            NetworkState::NoNetwork => {
+                imp.sync_now_button.set_sensitive(false);
+            }
+            _ => {
+                imp.sync_now_button.set_sensitive(true);
+            }
+        }
+    }
+
+    fn update_autosync_status(&self) {
+        let imp = self.imp();
+
+        let network_monitor_state = self.network_state();
+        let power_profiles_monitor_state = self.power_state();
+        let is_autosync_enabled = imp.settings.get::<bool>("autosync");
+
+        self.update_sync_now_button(network_monitor_state);
+
+        let title: Option<String> = match (
+            network_monitor_state,
+            power_profiles_monitor_state,
+            is_autosync_enabled,
+        ) {
+            (NetworkState::Ok, PowerState::Ok, _) => None,
+            (NetworkState::Ok, PowerState::PowerSaver, true) => {
+                Some(gettext("Autosync disabled: power saver is on"))
+            }
+            (NetworkState::NoNetwork, PowerState::Ok, true) => {
+                Some(gettext("Autosync disabled: system is offline"))
+            }
+            (NetworkState::NoNetwork, PowerState::PowerSaver, true) => Some(gettext(
+                "Autosync disabled: system is offline, power saver is on",
+            )),
+            (NetworkState::NoNetwork, _, false) => Some(gettext("System is offline")),
+            (NetworkState::NetworkMetered, PowerState::Ok, true) => {
+                Some(gettext("Autosync disabled: network is metered"))
+            }
+            (NetworkState::NetworkMetered, PowerState::PowerSaver, true) => Some(gettext(
+                "Autosync disabled: network is metered, power saver is on",
+            )),
+            (_, _, _) => None,
+        };
+
+        if let Some(title) = title {
+            imp.autosync_status.set_title(&title);
+            imp.autosync_status.set_revealed(true);
+        } else {
+            imp.autosync_status.set_revealed(false);
+        }
+    }
+
+    // fn setup_settings_values(&self) {
+    //     let imp = self.imp();
+    // }
 }
