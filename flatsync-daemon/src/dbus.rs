@@ -26,7 +26,9 @@ impl Daemon {
         self.imp
             .set_gist_secret(secret)
             .await
-            .map_err(|_| DBusError::InvalidSecret)
+            .map_err(|_| DBusError::InvalidSecret)?;
+
+        self.sync_now().await
     }
 
     /// ## `CreateGist(...)`
@@ -51,8 +53,7 @@ impl Daemon {
 
     async fn set_gist_id(&self, id: &str) -> Result<(), DBusError> {
         self.imp.set_gist_id(id);
-
-        Ok(())
+        self.sync_now().await
     }
 
     async fn sync_now(&self) -> Result<(), DBusError> {
