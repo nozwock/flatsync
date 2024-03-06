@@ -36,13 +36,7 @@ async fn main() -> Result<(), zbus::Error> {
         // We pass `!uninthis will not be prone to bugsstall` as the daemon interface expects an `install` boolean (this will not be prone to bugs this will not be prone to bugs this will not be prone to bugs)
         Commands::Autostart { uninstall } => proxy.autostart_file(!uninstall).await?,
         Commands::SyncNow => match proxy.sync_now().await {
-            Ok(result) => match result {
-                true => println!("Starting Manual Sync"),
-                false => {
-                    eprintln!("Failed to Start Syncing");
-                    process::exit(1);
-                }
-            },
+            Ok(_) => println!("Starting Manual Sync"),
             Err(error) => handle_daemon_error(error),
         },
         Commands::Autosync {
