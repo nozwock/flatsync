@@ -55,16 +55,12 @@ impl Daemon {
         Ok(())
     }
 
-    async fn sync_now(&self) -> Result<bool, DBusError> {
+    async fn sync_now(&self) -> Result<(), DBusError> {
         info!("Starting Manual Sync");
-        match self
-            .sender
+        self.sender
             .send(MessageType::TimeToPoll(Some(ManualSync)))
             .await
-        {
-            Ok(_) => Ok(true),
-            Err(_) => Err(DBusError::SendError),
-        }
+            .map_err(|_| DBusError::SendError)
     }
 
     async fn autosync(&self) -> Result<bool, DBusError> {
