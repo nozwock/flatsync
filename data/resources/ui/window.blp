@@ -20,58 +20,41 @@ menu primary_menu {
   }
 }
 
-template $FlatsyncApplicationWindow : ApplicationWindow {
-  [titlebar]
-  HeaderBar headerbar {
-    [end]
-    MenuButton appmenu_button {
-      icon-name: "open-menu-symbolic";
-      menu-model: primary_menu;
-    }
-  }
-
-  Adw.PreferencesPage page {
-    Adw.PreferencesGroup {
-      title: "GitHub Gists Settings";
-
-      Adw.PasswordEntryRow github_token_entry {
-        show-apply-button: true;
-        title: "GitHub _Token";
-        use-underline: true;
-      }
-
-      Adw.EntryRow github_id_entry {
-        show-apply-button: true;
-        title: "_Gists ID (leave empty if this is the first machine using flatsync)";
-        use-underline: true;
+template $FlatsyncApplicationWindow : Adw.ApplicationWindow {
+  content: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+     [end]
+      MenuButton appmenu_button {
+        icon-name: "open-menu-symbolic";
+        menu-model: primary_menu;
       }
     }
-    Adw.PreferencesGroup {
-      title: _("Daemon Settings");
+    content: Box {
+      orientation: vertical;
 
-      Adw.ExpanderRow {
-        title: _("_Autosync Settings");
-        subtitle: _("Settings to change the automatic synchronization behavior against a remote provider");
-        use-underline: true;
+      Box {
+      orientation: vertical;
+      // Height needs to be equal to Adw.Banner's height
+      height-request: 43;
 
-        Adw.SwitchRow autosync_switch {
-          title: _("_Autosync");
-          subtitle: _("Toggle on or off to switch between automatic or manual-only synchronization modes");
-          use-underline: true;
-        }
-
-        Adw.SpinRow autosync_timer_spin {
-          title: _("Autosync _Timer");
-          subtitle: _("Adjust the automatic synchronization interval, in minutes");
-          numeric: true;
-          snap-to-ticks: true;
-          use-underline: true;
-          adjustment: Adjustment autosync_timer_adjustment {
-            page-increment: 1;
-            step-increment: 1;
-          };
-        }
+      Adw.Banner autosync_status {}
       }
-    }
-  }
+
+      // TODO: Fix the Icon Shading with the Light Style
+      Adw.StatusPage welcome_status {}
+
+      Button sync_now_button {
+        label: _("_Sync Now");
+        use-underline: true;
+        styles ["suggested-action", "pill"]
+        halign: center;
+        vexpand: true;
+        valign: end;
+        margin-bottom: 50;
+        margin-top: 10;
+      }
+    };
+  };
 }
+

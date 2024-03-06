@@ -7,6 +7,7 @@ use gtk::{
 use libflatsync_common::config::{APP_ID, PKGDATADIR, PROFILE, VERSION};
 use log::{debug, info};
 
+use crate::preferences::FlatsyncPreferencesWindow;
 use crate::window::FlatsyncApplicationWindow;
 
 mod imp {
@@ -93,13 +94,20 @@ impl FlatsyncApplication {
                 app.show_about_window();
             })
             .build();
-        self.add_action_entries([action_quit, action_about]);
+        // Preferences
+        let action_preferences = gio::ActionEntry::builder("preferences")
+            .activate(|app: &Self, _, _| {
+                app.show_preferences_window();
+            })
+            .build();
+        self.add_action_entries([action_quit, action_about, action_preferences]);
     }
 
     // Sets up keyboard shortcuts
     fn setup_accels(&self) {
         self.set_accels_for_action("app.quit", &["<Control>q"]);
         self.set_accels_for_action("window.close", &["<Control>w"]);
+        self.set_accels_for_action("app.preferences", &["<Control>p"]);
     }
 
     fn setup_css(&self) {
@@ -131,6 +139,17 @@ impl FlatsyncApplication {
             .build();
 
         about_window.present();
+    }
+
+    fn show_preferences_window(&self) {
+        let main_window = &self.main_window();
+
+        let preferences_window = FlatsyncPreferencesWindow::new(
+            main_window,
+            main_window.imp().proxy.get().unwrap().clone(),
+        );
+
+        preferences_window.present();
     }
 
     pub fn run(&self) -> glib::ExitCode {
