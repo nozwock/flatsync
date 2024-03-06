@@ -11,7 +11,8 @@ libflatsync-common = { path = "../libflatsync-common" }
 log = "0.4"
 gio = "0.18"
 glib = "0.18"
-pretty_env_logger = "0.5"
+tracing-subscriber = "0.3.18"
+tracing = { version = "0.1.40", features = ["log-always"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 zbus = { version = "3.11.0", default-features = false, features = ["tokio"] }
