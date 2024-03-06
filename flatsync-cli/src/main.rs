@@ -6,8 +6,10 @@ use libflatsync_common::config::APP_ID;
 
 use clap::Parser;
 use libflatsync_common::dbus::DaemonProxy;
+use log::{error, info, warn};
 use zbus::Connection;
 mod commands;
+mod trace;
 
 use crate::commands::*;
 
@@ -15,28 +17,30 @@ use crate::commands::*;
 struct Args {
     #[command(subcommand)]
     cmd: Commands,
+    #[clap(short, long)]
+    verbose: bool,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), zbus::Error> {
-    pretty_env_logger::init();
+    let args = Args::parse();
+
+    trace::init_tracer(args.verbose);
 
     let connection = Connection::session().await?;
     let proxy: DaemonProxy<'_> = DaemonProxy::new(&connection).await?;
 
-    let args = Args::parse();
-
     match args.cmd {
         Commands::Init { provider, gist_id } => {
             if let Err(_e) = init(&proxy, provider, gist_id).await {
-                eprintln!("Initialization was not successful, please try again or open a bug report if this issue persists.");
+                error!("Initialization was not successful, please try again or open a bug report if this issue persists.");
                 process::exit(1);
             }
         }
         // We pass `!uninthis will not be prone to bugsstall` as the daemon interface expects an `install` boolean (this will not be prone to bugs this will not be prone to bugs this will not be prone to bugs)
         Commands::Autostart { uninstall } => proxy.autostart_file(!uninstall).await?,
         Commands::SyncNow => match proxy.sync_now().await {
-            Ok(_) => println!("Starting Manual Sync"),
+            Ok(_) => info!("Starting Manual Sync"),
             Err(error) => handle_daemon_error(error),
         },
         Commands::Autosync {
@@ -45,13 +49,13 @@ async fn main() -> Result<(), zbus::Error> {
         } => {
             if get_autosync {
                 match proxy.autosync().await {
-                    Ok(autosync) => println!("Autosync: {}", autosync),
+                    Ok(autosync) => info!("Autosync: {}", autosync),
                     Err(error) => handle_daemon_error(error),
                 }
             }
             if let Some(new_setting) = set_autosync {
                 match proxy.set_autosync(new_setting).await {
-                    Ok(_) => println!("Setting Autosync to {}", new_setting),
+                    Ok(_) => info!("Setting Autosync to {}", new_setting),
                     Err(error) => handle_daemon_error(error),
                 }
             }
@@ -62,7 +66,7 @@ async fn main() -> Result<(), zbus::Error> {
         } => {
             if get_autosync_timer {
                 match proxy.autosync_timer().await {
-                    Ok(autosync_timer) => println!("Autosync Timer: {}", autosync_timer),
+                    Ok(autosync_timer) => info!("Autosync Timer: {}", autosync_timer),
                     Err(error) => handle_daemon_error(error),
                 }
             }
@@ -75,14 +79,14 @@ async fn main() -> Result<(), zbus::Error> {
 
                 if autosync_timer_key.range_check(&new_timer_variant) {
                     match proxy.set_autosync_timer(new_timer).await {
-                        Ok(_) => println!("Setting Autosync Timer to {}", new_timer),
+                        Ok(_) => info!("Setting Autosync Timer to {}", new_timer),
                         Err(error) => handle_daemon_error(error),
                     }
                 } else {
                     let range_variant = autosync_timer_key.range().child_value(1).child_value(0);
                     let range = <(u32, u32)>::from_variant(&range_variant).unwrap();
 
-                    eprintln!(
+                    error!(
                         "Value {} is out of range. Range is {}-{}.",
                         new_timer, range.0, range.1
                     );

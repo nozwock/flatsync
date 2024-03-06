@@ -13,3 +13,5 @@ libflatsync-common/src/config.rs
 .flatpak-builder
 
 /subprojects/blueprint-compiler
+
+/.idea
