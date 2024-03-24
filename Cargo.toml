@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 adw = { version = "0.5", package = "libadwaita", features = ["v1_4"] }
 gettext-rs = { version = "0.7", features = ["gettext-system"] }
-gtk = { version = "0.7", package = "gtk4" }
+gtk = { version = "0.7", package = "gtk4", features = ["gnome_45"] }
 libflatsync-common = { path = "libflatsync-common" }
 log = "0.4"
 once_cell = "1.14"
