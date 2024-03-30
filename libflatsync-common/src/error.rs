@@ -12,4 +12,12 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error("Error while dealing with reqwest and OAuth2: {0}")]
     OAuth2ReqwestFailure(String),
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
+}
+
+impl Error {
+    pub fn other(err: impl Into<anyhow::Error>) -> Self {
+        Self::Other(err.into())
+    }
 }

@@ -54,7 +54,7 @@ pub mod client {
                     .build()
                     .unwrap()
                     .request(method, url),
-                client: get_github_basic_client(),
+                client: get_github_basic_client()?,
             })
         }
 

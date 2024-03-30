@@ -36,6 +36,15 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error("ASHPD error: {0}")]
     AshpdFailure(#[from] ashpd::Error),
+    // NOTE: A lot of these don't seem useful or rather recoverable. Better to replace them with the Other variant, but I won't be removing them for now...
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
+}
+
+impl Error {
+    pub fn other(err: impl Into<anyhow::Error>) -> Self {
+        Self::Other(err.into())
+    }
 }
 
 #[derive(zbus::DBusError, Debug)]

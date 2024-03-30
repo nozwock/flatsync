@@ -31,22 +31,25 @@ impl<O: glib::IsA<libflatpak::Installation>> From<O> for FlatpakInstallation {
         let value = value.upcast();
 
         Self {
+            // NOTE: Tried TryFrom, but conflict impl with core::
+            // Applies to other such impls in the models aswell
             id: value.id().unwrap().into(),
-            path: match value.path() {
-                Some(f) => f.path().unwrap(),
-                None => Default::default(),
-            },
+            path: value.path().and_then(|i| i.path()).unwrap_or_default(),
             display_name: value.display_name().map(|s| s.into()),
             priority: value.priority(),
             storage_type: value.storage_type().into(),
-            refs: match value.list_installed_refs(gio::Cancellable::NONE) {
-                Ok(v) => v.into_iter().map(|item| item.into()).collect(),
-                Err(_) => vec![],
-            },
-            remotes: match value.list_remotes(gio::Cancellable::NONE) {
-                Ok(v) => v.into_iter().map(|item| item.into()).collect(),
-                Err(_) => vec![],
-            },
+            refs: value
+                .list_installed_refs(gio::Cancellable::NONE)
+                .map(|i| {
+                    i.into_iter()
+                        .map(|install_ref| install_ref.into())
+                        .collect()
+                })
+                .unwrap_or_default(),
+            remotes: value
+                .list_remotes(gio::Cancellable::NONE)
+                .map(|i| i.into_iter().map(|remote| remote.into()).collect())
+                .unwrap_or_default(),
         }
     }
 }
