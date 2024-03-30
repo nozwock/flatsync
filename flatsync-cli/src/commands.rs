@@ -44,7 +44,7 @@ pub async fn init(
     proxy: &DaemonProxy<'_>,
     provider: Providers,
     gist_id: Option<String>,
-) -> Result<(), zbus::Error> {
+) -> anyhow::Result<()> {
     info!("Initializing FlatSync daemon");
 
     match provider {
@@ -54,15 +54,13 @@ pub async fn init(
     Ok(())
 }
 
-async fn init_for_github(
-    proxy: &DaemonProxy<'_>,
-    gist_id: Option<String>,
-) -> Result<(), zbus::Error> {
+async fn init_for_github(proxy: &DaemonProxy<'_>, gist_id: Option<String>) -> anyhow::Result<()> {
     // Initialize OAuth Device Flow
     let github = GitHubProvider::new();
 
-    let device_auth_res = github.device_code().await.unwrap();
+    let device_auth_res = github.device_code().await?;
 
+    // NOTE: More like info or warn?
     error!("Please install FlatSync as a GitHub app to your account **first** by following this link: {:?}.\nThis is required because GitHub's API doesn't allow us to interact with Gists without additional permission via a GitHub App installation.", GH_APP_INSTALLATION_URL);
 
     error!(
@@ -71,8 +69,7 @@ async fn init_for_github(
         &device_auth_res.user_code().secret().to_string()
     );
 
-    let token_pair =
-        serde_json::to_string(&github.register_device(device_auth_res).await.unwrap()).unwrap();
+    let token_pair = serde_json::to_string(&github.register_device(device_auth_res).await?)?;
 
     proxy.set_gist_secret(token_pair.as_str()).await?;
 
@@ -87,9 +84,4 @@ async fn init_for_github(
     }
 
     Ok(())
-}
-
-pub fn handle_daemon_error(error: zbus::Error) {
-    error!("Something Went Wrong, is the Daemon running?\n {}", error);
-    process::exit(1);
 }
