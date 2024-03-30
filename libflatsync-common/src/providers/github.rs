@@ -108,8 +108,6 @@ impl OauthClientDeviceFlow for GitHubProvider {
 // }
 
 impl GitHubProvider {
-    // NOTE: I see no other relevant error variant, so anyhow it is.
-    // Not sure whether to change fn name to try_new
     pub fn new() -> anyhow::Result<Self> {
         Ok(Self {
             client: get_github_basic_client()?,

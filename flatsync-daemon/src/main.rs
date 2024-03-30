@@ -89,7 +89,7 @@ async fn poll_remote(
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     pretty_env_logger::init();
 
     let (sender_flatpak_installation_changed, mut reciever) =

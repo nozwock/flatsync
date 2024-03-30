@@ -1,4 +1,5 @@
 use crate::Error;
+use anyhow::Context as anyhowContext;
 use diff::Diff;
 use libflatpak::{gio, prelude::*};
 use libflatsync_common::{
@@ -162,11 +163,12 @@ impl Context {
     }
 
     fn is_installed(&self, kind: FlatpakInstallationKind, id: &str) -> Result<bool, Error> {
-        let binding = FlatpakInstallationPayload::new_from_system().unwrap();
-        let apps = match binding.installations(kind) {
-            Some(v) => v,
-            None => return Err(Error::FlatpakNoSuchInstallation),
-        };
+        // nozwock: A libflatsync_common::Error error hmm..., should probably remove all the variants, where we don't care about the ability to match on them.
+        // Come back to these once the Error variants are pruned. Throwing in Other for now.
+        let binding = FlatpakInstallationPayload::new_from_system().map_err(Error::other)?;
+        let apps = binding
+            .installations(kind)
+            .ok_or(Error::FlatpakNoSuchInstallation)?;
 
         Ok(apps.refs.iter().any(|ref_| ref_.ref_ == id))
     }
@@ -180,7 +182,7 @@ impl Context {
     ) -> Result<(), Error> {
         let transaction =
             libflatpak::Transaction::for_installation(installation, gio::Cancellable::NONE)
-                .unwrap();
+                .map_err(Error::other)?;
         transaction.add_default_dependency_sources();
         // Since we're a background application, we don't want to annoy the user
         transaction.set_no_interaction(true);
@@ -196,8 +198,9 @@ impl Context {
             transaction
                 .operations()
                 .iter()
-                .map(|s| s.get_ref().unwrap().into())
-                .collect::<Vec<String>>()
+                .map(|s| s.get_ref().map(|i| i.to_string()))
+                .collect::<Option<Vec<_>>>()
+                .context("Couldn't access TransactionOperation")?
         );
 
         transaction
@@ -286,16 +289,20 @@ impl Context {
         user_path
     }
 
-    fn get_user_or_system_installation(kind: FlatpakInstallationKind) -> libflatpak::Installation {
+    fn get_user_or_system_installation(
+        kind: FlatpakInstallationKind,
+    ) -> anyhow::Result<libflatpak::Installation> {
         match kind {
             FlatpakInstallationKind::User => {
                 // User Installation
                 let file = gio::File::for_path(Self::get_user_install_path());
 
-                libflatpak::Installation::for_path(&file, true, gio::Cancellable::NONE).unwrap()
+                libflatpak::Installation::for_path(&file, true, gio::Cancellable::NONE)
+                    .map_err(anyhow::Error::new)
             }
             FlatpakInstallationKind::System => {
-                libflatpak::Installation::new_system(gio::Cancellable::NONE).unwrap()
+                libflatpak::Installation::new_system(gio::Cancellable::NONE)
+                    .map_err(anyhow::Error::new)
             }
         }
     }
@@ -310,7 +317,7 @@ impl Context {
             None => Err(Error::FlatpakNoSuchInstallation),
         }?;
 
-        let installation = Self::get_user_or_system_installation(kind);
+        let installation = Self::get_user_or_system_installation(kind)?;
 
         for remote in &remote_installations.remotes {
             self.add_remote(remote, &installation)?;
@@ -355,7 +362,7 @@ impl Context {
             .filter(|ref_| !remote_refs_temp.contains(ref_))
             .collect::<Vec<_>>();
 
-        let installation = Self::get_user_or_system_installation(kind);
+        let installation = Self::get_user_or_system_installation(kind)?;
 
         for ref_ in to_uninstall {
             if !self.is_installed(kind, &ref_.ref_)? {

@@ -4,7 +4,6 @@ use libflatsync_common::providers::github::{GitHubProvider, GH_APP_INSTALLATION_
 use libflatsync_common::providers::oauth_client::OauthClientDeviceFlow;
 use libflatsync_common::providers::providers_list::Providers;
 use log::*;
-use std::process;
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
@@ -56,11 +55,11 @@ pub async fn init(
 
 async fn init_for_github(proxy: &DaemonProxy<'_>, gist_id: Option<String>) -> anyhow::Result<()> {
     // Initialize OAuth Device Flow
-    let github = GitHubProvider::new();
+    let github = GitHubProvider::new()?;
 
     let device_auth_res = github.device_code().await?;
 
-    // NOTE: More like info or warn?
+    // nozwock: More like info or warn?
     error!("Please install FlatSync as a GitHub app to your account **first** by following this link: {:?}.\nThis is required because GitHub's API doesn't allow us to interact with Gists without additional permission via a GitHub App installation.", GH_APP_INSTALLATION_URL);
 
     error!(

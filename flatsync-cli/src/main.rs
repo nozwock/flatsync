@@ -99,6 +99,6 @@ async fn main() -> anyhow::Result<()> {
         Ok(())
     }
 
-    // NOTE: Shouldn't we be using tracing::error instead?
+    // nozwock: Shouldn't we be using tracing::error instead?
     _main().await.inspect_err(|e| error!("{e}"))
 }

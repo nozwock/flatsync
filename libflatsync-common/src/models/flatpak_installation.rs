@@ -31,7 +31,7 @@ impl<O: glib::IsA<libflatpak::Installation>> From<O> for FlatpakInstallation {
         let value = value.upcast();
 
         Self {
-            // NOTE: Tried TryFrom, but conflict impl with core::
+            // nozwock: Tried TryFrom, but conflict impl with core::
             // Applies to other such impls in the models aswell
             id: value.id().unwrap().into(),
             path: value.path().and_then(|i| i.path()).unwrap_or_default(),
