@@ -83,7 +83,8 @@ async fn main() -> anyhow::Result<()> {
                     } else {
                         let range_variant =
                             autosync_timer_key.range().child_value(1).child_value(0);
-                        let range = <(u32, u32)>::from_variant(&range_variant).context("")?;
+                        let range = <(u32, u32)>::from_variant(&range_variant)
+                            .context("Incorrent range type")?;
 
                         bail!(
                             "Value {} is out of range. Range is {}-{}.",
@@ -99,6 +100,6 @@ async fn main() -> anyhow::Result<()> {
         Ok(())
     }
 
-    // nozwock: Shouldn't we be using tracing::error instead?
+    // nozwock: Shouldn't we be using tracing::error instead? Is it because of log-always? Couldn't find enough details...
     _main().await.inspect_err(|e| error!("{e}"))
 }
