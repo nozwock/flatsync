@@ -2,6 +2,7 @@ use crate::{
     data_sinks::{data_sink::DataSink, GitHubGistDataSink},
     Error,
 };
+use anyhow::Context;
 use ashpd::desktop::background::Background;
 use libflatsync_common::{config, FlatpakInstallationPayload};
 use log::{info, trace};
@@ -23,24 +24,27 @@ impl Impl {
         self.sink.set_secret(secret).await
     }
 
-    pub fn set_gist_id(&self, id: &str) {
-        self.sink.set_sink_id(id);
+    pub fn set_gist_id(&self, id: &str) -> anyhow::Result<()> {
+        self.sink.set_sink_id(id)?;
+        Ok(())
     }
 
     pub fn autosync(&self) -> bool {
         self.sink.autosync()
     }
 
-    pub fn set_autosync(&self, autosync: bool) {
-        self.sink.set_autosync(autosync)
+    pub fn set_autosync(&self, autosync: bool) -> anyhow::Result<()> {
+        self.sink.set_autosync(autosync)?;
+        Ok(())
     }
 
     pub fn autosync_timer(&self) -> u32 {
         self.sink.autosync_timer()
     }
 
-    pub fn set_autosync_timer(&self, timer: u32) {
-        self.sink.set_autosync_timer(timer);
+    pub fn set_autosync_timer(&self, timer: u32) -> anyhow::Result<()> {
+        self.sink.set_autosync_timer(timer)?;
+        Ok(())
     }
 
     pub async fn post_gist(&self) -> Result<(), Error> {
@@ -96,9 +100,8 @@ impl Impl {
         let autostart_desktop_file = Path::new(config::AUTOSTART_DESKTOP_FILE_PATH);
         let desktop_file_name = autostart_desktop_file
             .file_name()
-            .unwrap()
-            .to_str()
-            .unwrap();
+            .and_then(|i| i.to_str())
+            .context("Couldn't get proper filename")?;
 
         let mut autostart_user_folder = glib::user_config_dir();
         autostart_user_folder.push("autostart");

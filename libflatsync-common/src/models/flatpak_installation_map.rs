@@ -1,4 +1,5 @@
 pub use crate::models::{FlatpakInstallation, FlatpakInstallationKind};
+use anyhow::Context;
 use libflatpak::{gio, prelude::*};
 use std::collections::BTreeMap;
 
@@ -12,29 +13,24 @@ pub struct FlatpakInstallationMap(pub BTreeMap<FlatpakInstallationKind, FlatpakI
 impl FlatpakInstallationMap {
     /// Queries the system for available Flatpak installations.
     pub fn available_installations() -> Result<Self, crate::Error> {
-        let mut ret: BTreeMap<_, _> = match libflatpak::system_installations(gio::Cancellable::NONE)
-        {
-            Ok(v) => v
-                .into_iter()
-                .map(|item| {
-                    (
-                        FlatpakInstallationKind::try_from_str(item.id().unwrap().as_str()).unwrap(),
-                        item.into(),
-                    )
-                })
-                .collect(),
-            Err(e) => return Err(crate::Error::FlatpakInstallationQueryFailure(e)),
-        };
+        let mut ret = libflatpak::system_installations(gio::Cancellable::NONE)
+            .map_err(crate::Error::FlatpakInstallationQueryFailure)?
+            .into_iter()
+            .map(|item| {
+                item.id()
+                    .with_context(|| format!("No installation id for {item}"))
+                    .map_err(crate::Error::other)
+                    .and_then(|id| FlatpakInstallationKind::try_from_str(id.as_str()))
+                    .map(|i| (i, item.into()))
+            })
+            .collect::<Result<BTreeMap<_, _>, _>>()?;
 
-        let user_inst = match FlatpakInstallation::user_installation() {
-            Ok(inst) => (
-                FlatpakInstallationKind::try_from_str(inst.id.as_str()).unwrap(),
-                inst,
-            ),
-            Err(e) => return Err(e),
-        };
+        let inst = FlatpakInstallation::user_installation()?;
 
-        ret.insert(user_inst.0, user_inst.1);
+        ret.insert(
+            FlatpakInstallationKind::try_from_str(inst.id.as_str())?,
+            inst,
+        );
 
         Ok(Self(ret))
     }

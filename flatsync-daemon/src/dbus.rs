@@ -52,7 +52,7 @@ impl Daemon {
     }
 
     async fn set_gist_id(&self, id: &str) -> Result<(), DBusError> {
-        self.imp.set_gist_id(id);
+        _ = self.imp.set_gist_id(id);
         self.sync_now().await
     }
 
@@ -69,7 +69,7 @@ impl Daemon {
     }
 
     async fn set_autosync(&self, autosync: bool) -> Result<(), DBusError> {
-        self.imp.set_autosync(autosync);
+        _ = self.imp.set_autosync(autosync);
         Ok(())
     }
 
@@ -78,7 +78,7 @@ impl Daemon {
     }
 
     async fn set_autosync_timer(&self, timer: u32) -> Result<(), DBusError> {
-        self.imp.set_autosync_timer(timer);
+        _ = self.imp.set_autosync_timer(timer);
         Ok(())
     }
 

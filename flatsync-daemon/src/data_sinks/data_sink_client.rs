@@ -11,14 +11,14 @@ pub enum SecretType {
 }
 #[async_trait]
 pub trait DataSinkClient {
-    async fn keyring(&self) -> oo7::Keyring {
-        oo7::Keyring::new().await.unwrap()
+    async fn keyring(&self) -> anyhow::Result<oo7::Keyring> {
+        oo7::Keyring::new().await.map_err(anyhow::Error::new)
     }
 
     fn sink_name(&self) -> &'static str;
 
     async fn secret_raw(&self) -> Result<String, Error> {
-        let keyring = self.keyring().await;
+        let keyring = self.keyring().await?;
         let mut item = keyring
             .search_items(HashMap::from([(
                 "purpose",

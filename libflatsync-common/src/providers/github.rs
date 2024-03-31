@@ -24,7 +24,7 @@ async fn custom_async_http_client(request: HttpRequest) -> Result<HttpResponse, 
     match orig_res {
         Err(e) => Err(Error::OAuth2ReqwestFailure(e.to_string())),
         Ok(mut res) => {
-            let msg = std::str::from_utf8(&res.body).unwrap();
+            let msg = std::str::from_utf8(&res.body).map_err(Error::other)?;
 
             // The oauth2 library expects a 400 error code, but GitHub returns a 200
             // See https://github.com/ramosbugs/oauth2-rs/issues/218#issuecomment-1575245490
@@ -41,14 +41,14 @@ async fn custom_async_http_client(request: HttpRequest) -> Result<HttpResponse, 
     }
 }
 
-pub fn get_github_basic_client() -> BasicClient {
-    BasicClient::new(
+pub fn get_github_basic_client() -> anyhow::Result<BasicClient> {
+    Ok(BasicClient::new(
         ClientId::new(GH_CLIENT_ID.into()),
         None,
-        AuthUrl::new(GH_AUTH_URL.into()).unwrap(),
-        Some(TokenUrl::new(GH_TOKEN_URL.into()).unwrap()),
+        AuthUrl::new(GH_AUTH_URL.into())?,
+        Some(TokenUrl::new(GH_TOKEN_URL.into())?),
     )
-    .set_device_authorization_url(DeviceAuthorizationUrl::new(GH_DEVICE_AUTH_URL.into()).unwrap())
+    .set_device_authorization_url(DeviceAuthorizationUrl::new(GH_DEVICE_AUTH_URL.into())?))
 }
 
 pub struct GitHubProvider {
@@ -58,9 +58,12 @@ pub struct GitHubProvider {
 #[async_trait]
 impl OauthClientDeviceFlow for GitHubProvider {
     async fn device_code(&self) -> Result<StandardDeviceAuthorizationResponse, Error> {
-        let req = self.client.exchange_device_code().unwrap();
+        let req = self.client.exchange_device_code().map_err(Error::other)?;
 
-        Ok(req.request_async(async_http_client).await.unwrap())
+        Ok(req
+            .request_async(async_http_client)
+            .await
+            .map_err(Error::other)?)
     }
 
     async fn register_device(
@@ -98,16 +101,16 @@ impl OauthClientDeviceFlow for GitHubProvider {
     }
 }
 
-impl Default for GitHubProvider {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+// impl Default for GitHubProvider {
+//     fn default() -> Self {
+//         Self::new()
+//     }
+// }
 
 impl GitHubProvider {
-    pub fn new() -> Self {
-        Self {
-            client: get_github_basic_client(),
-        }
+    pub fn new() -> anyhow::Result<Self> {
+        Ok(Self {
+            client: get_github_basic_client()?,
+        })
     }
 }

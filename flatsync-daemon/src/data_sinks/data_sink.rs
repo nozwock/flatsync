@@ -27,31 +27,32 @@ pub trait DataSink {
         Settings::instance().get(&format!("{}-id", self.sink_name()))
     }
 
-    fn set_sink_id(&self, id: &str) {
+    fn set_sink_id(&self, id: &str) -> anyhow::Result<()> {
         debug!("Setting new sink id: {}", id);
-        Settings::instance()
-            .set(&format!("{}-id", self.sink_name()), id)
-            .unwrap();
+        Settings::instance().set(&format!("{}-id", self.sink_name()), id)?;
+        Ok(())
     }
 
     fn autosync(&self) -> bool {
         Settings::instance().get("autosync")
     }
 
-    fn set_autosync(&self, autosync: bool) {
-        Settings::instance().set("autosync", autosync).unwrap();
+    fn set_autosync(&self, autosync: bool) -> anyhow::Result<()> {
+        Settings::instance().set("autosync", autosync)?;
+        Ok(())
     }
 
     fn autosync_timer(&self) -> u32 {
         Settings::instance().get("autosync-timer")
     }
 
-    fn set_autosync_timer(&self, timer: u32) {
-        Settings::instance().set("autosync-timer", timer).unwrap();
+    fn set_autosync_timer(&self, timer: u32) -> anyhow::Result<()> {
+        Settings::instance().set("autosync-timer", timer)?;
+        Ok(())
     }
 
     async fn set_secret(&self, secret: &str) -> Result<(), Error> {
-        let keyring = self.keyring().await;
+        let keyring = self.keyring().await?;
         keyring.unlock().await?;
         let name = self.sink_name();
         keyring
@@ -65,8 +66,8 @@ pub trait DataSink {
         Ok(())
     }
 
-    async fn keyring(&self) -> oo7::Keyring {
-        oo7::Keyring::new().await.unwrap()
+    async fn keyring(&self) -> anyhow::Result<oo7::Keyring> {
+        oo7::Keyring::new().await.map_err(anyhow::Error::new)
     }
 
     fn sink_name(&self) -> &'static str;

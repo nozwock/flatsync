@@ -24,6 +24,7 @@ pub mod client {
     use crate::data_sinks::oauth_client::OauthClient;
     use crate::data_sinks::rest_client::RestClient;
     use crate::Error;
+    use anyhow::Context;
     use async_trait::async_trait;
     use libflatsync_common::providers::github::get_github_basic_client;
     use libflatsync_common::providers::oauth_client::{AccessTokenData, TokenPair};
@@ -52,14 +53,15 @@ pub mod client {
                 request: reqwest::Client::builder()
                     .user_agent(APP_USER_AGENT)
                     .build()
-                    .unwrap()
+                    .map_err(Error::other)?
                     .request(method, url),
-                client: get_github_basic_client(),
+                client: get_github_basic_client()?,
             })
         }
 
         async fn secret(&self) -> Result<SecretType, Error> {
-            let token_pair = serde_json::from_str::<TokenPair>(&self.secret_raw().await?).unwrap();
+            let token_pair = serde_json::from_str::<TokenPair>(&self.secret_raw().await?)
+                .map_err(Error::other)?;
 
             Ok(SecretType::OAuth(token_pair))
         }
@@ -69,7 +71,7 @@ pub mod client {
                 unreachable!();
             };
 
-            self.check_tokens(&token_pair).await.unwrap();
+            self.check_tokens(&token_pair).await.map_err(Error::other)?;
 
             self.request
                 .header("Accept", "application/vnd.github+json")
@@ -97,16 +99,21 @@ pub mod client {
                 return Ok(tokens.clone());
             }
 
-            if token_data.expires_in.unwrap() > chrono::Utc::now() {
+            if token_data.expires_in.context("Token has no expiry")? > chrono::Utc::now() {
                 return Ok(tokens.clone());
             }
 
             let token = self
                 .client
-                .exchange_refresh_token(&tokens.refresh_token.clone().unwrap())
+                .exchange_refresh_token(
+                    &tokens
+                        .refresh_token
+                        .clone()
+                        .context("No refresh token found")?,
+                )
                 .request_async(async_http_client)
                 .await
-                .unwrap();
+                .map_err(Error::other)?;
 
             let token_data = AccessTokenData {
                 token: token.access_token().clone(),
@@ -117,7 +124,12 @@ pub mod client {
 
             Ok(TokenPair {
                 access_token_data: token_data,
-                refresh_token: Some(token.refresh_token().unwrap().clone()),
+                refresh_token: Some(
+                    token
+                        .refresh_token()
+                        .context("No refresh token recieved from the response")?
+                        .clone(),
+                ),
             })
         }
     }
@@ -194,7 +206,7 @@ impl DataSink for GitHubGistDataSink {
         debug!("Gist creation response: {:?}", resp);
         let data: CreateGistResponse = resp.json().await?;
         debug!("Gist creation response data: {:?}", data);
-        self.set_sink_id(&data.id);
+        self.set_sink_id(&data.id)?;
         Ok(())
     }
 

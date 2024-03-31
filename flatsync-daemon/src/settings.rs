@@ -20,7 +20,9 @@ impl Settings {
             SETTINGS_INIT.call_once(|| {
                 SETTINGS = Some(Self(gio::Settings::new("app.drey.FlatSync.Devel")));
             });
-            SETTINGS.clone().unwrap()
+            SETTINGS
+                .clone()
+                .expect("SETTINGS is initialised before clone()")
         }
     }
 }
