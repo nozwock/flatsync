@@ -1,14 +1,14 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $FlatsyncSetupScreen: Adw.ApplicationWindow {
+template $FlatsyncSetupWindow: Adw.ApplicationWindow {
   width-request: 400;
   height-request: 340;
   default-width: 640;
   default-height: 500;
 
-  Adw.NavigationView {
-    Adw.NavigationPage {
+  Adw.NavigationView navigation {
+    Adw.NavigationPage page_home {
       tag: 'page-home';
 
       Adw.ToolbarView {
@@ -41,11 +41,10 @@ template $FlatsyncSetupScreen: Adw.ApplicationWindow {
             label: _('To get started, please review the settings below.');
           }
 
-          Adw.PreferencesGroup provider_choice {
-            Adw.ComboRow {
+          Adw.PreferencesGroup {
+            Adw.ComboRow provider_choice {
               title: _('Provider');
               subtitle: _('Cloud provider to synchronize against.');
-
               // model: Adw.EnumListModel {}
               model: StringList {
                 strings [
@@ -68,28 +67,23 @@ template $FlatsyncSetupScreen: Adw.ApplicationWindow {
             }
           }
 
-          Button go_provider_button {
-            action-name: 'navigation.push';
-            action-target: 'page-provider';
+          Button push_provider_button {
+            label: _('Next');
             can-shrink: true;
+            hexpand: false;
+            halign: center;
 
             styles [
               "pill",
               "suggested-action",
             ]
-
-            Adw.ButtonContent {
-              label: _('Next');
-              icon-name: 'go-next-symbolic';
-            }
           }
         }
       }
     }
 
-    Adw.NavigationPage {
+    Adw.NavigationPage page_provider {
       tag: 'page-provider'; // Github provider
-
       Adw.ToolbarView {
         [top]
         Adw.HeaderBar {}
@@ -134,9 +128,11 @@ template $FlatsyncSetupScreen: Adw.ApplicationWindow {
             }
           }
 
-          Button {
-            label: _('Done');
+          Button finish_guide_button {
+            label: _('Finish');
             can-shrink: true;
+            hexpand: false;
+            halign: center;
 
             styles [
               "pill",
