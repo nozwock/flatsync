@@ -1,0 +1,146 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $FlatsyncSetupWindow: Adw.ApplicationWindow {
+  width-request: 400;
+  height-request: 340;
+  default-width: 640;
+  default-height: 500;
+
+  Adw.NavigationView navigation {
+    Adw.NavigationPage page_home {
+      tag: 'page-home';
+
+      Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {}
+
+        Box {
+          orientation: vertical;
+          valign: center;
+          halign: center;
+          spacing: 18;
+
+          Label {
+            label: _('Flatsync');
+
+            styles [
+              "large-title",
+            ]
+          }
+
+          Label {
+            label: _('Setup Guide');
+
+            styles [
+              "title-1",
+            ]
+          }
+
+          Label {
+            label: _('To get started, please review the settings below.');
+          }
+
+          Adw.PreferencesGroup {
+            Adw.ComboRow provider_choice {
+              title: _('Provider');
+              subtitle: _('Cloud provider to synchronize against.');
+              // model: Adw.EnumListModel {}
+              model: StringList {
+                strings [
+                  "Github",
+                ]
+              };
+            }
+
+            Adw.ComboRow installation_choice {
+              title: _('Installations');
+              subtitle: _('Whether to synchronize Flatpak installations for the system, the current user, or both.');
+
+              model: StringList {
+                strings [
+                  "Both",
+                  "System",
+                  "User",
+                ]
+              };
+            }
+          }
+
+          Button push_provider_button {
+            label: _('Next');
+            can-shrink: true;
+            hexpand: false;
+            halign: center;
+
+            styles [
+              "pill",
+              "suggested-action",
+            ]
+          }
+        }
+      }
+    }
+
+    Adw.NavigationPage page_provider {
+      tag: 'page-provider'; // Github provider
+      Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {}
+
+        Box {
+          orientation: vertical;
+          valign: center;
+          halign: center;
+          spacing: 18;
+
+          Label {
+            label: _('Provider');
+
+            styles [
+              "large-title",
+            ]
+          }
+
+          Label provider_label {
+            label: _('Github Gist');
+
+            styles [
+              "title-1",
+            ]
+          }
+
+          Label {
+            label: _('Fill in your authentication details, to complete the setup guide.');
+          }
+
+          Adw.PreferencesGroup {
+            Adw.PasswordEntryRow github_token_entry {
+              show-apply-button: true;
+              title: "GitHub _Token";
+              use-underline: true;
+            }
+
+            Adw.EntryRow github_id_entry {
+              show-apply-button: true;
+              title: "_Gists ID (leave empty if this is the first machine using flatsync)";
+              use-underline: true;
+            }
+          }
+
+          Button finish_guide_button {
+            label: _('Finish');
+            can-shrink: true;
+            hexpand: false;
+            halign: center;
+
+            styles [
+              "pill",
+              "suggested-action",
+            ]
+          }
+        }
+      }
+    }
+  }
+}
