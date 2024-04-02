@@ -2,6 +2,7 @@ mod application;
 mod network_state;
 mod power_state;
 mod preferences;
+mod setup_window;
 mod window;
 
 use self::application::FlatsyncApplication;
